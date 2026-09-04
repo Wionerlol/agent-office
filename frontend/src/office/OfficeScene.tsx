@@ -1,10 +1,11 @@
-import { Application, Container, Graphics, Text, TextStyle } from "pixi.js";
+import { Application, Container, Graphics, Text } from "pixi.js";
 import { useEffect, useRef, useState } from "react";
 
 import type { Agent } from "../models/agent";
 import { useAgentStore } from "../store/agents";
-import { assignDesk, OFFICE_HEIGHT, OFFICE_WIDTH, POSITIONS, ZONES, type Point } from "./layout";
+import { assignDesk, OFFICE_HEIGHT, OFFICE_WIDTH, POSITIONS, spreadAgentTargets, type Point } from "./layout";
 import { routeBetween } from "./navigation";
+import { drawOfficeScenery } from "./scenery";
 import { visualFor, type VisualState } from "./visual";
 
 interface OfficeSceneProps {
@@ -14,75 +15,83 @@ interface OfficeSceneProps {
 
 interface RenderedAgent {
   container: Container;
-  body: Graphics;
+  body: Container;
   name: Text;
   status: Text;
   path: Point[];
   targetZone: string;
+  targetPoint: Point;
   animation: VisualState;
   phase: number;
 }
 
-const agentColor = (id: string) => {
+const agentColor = (id: string): number => {
   const palette = [0x3a7d78, 0xc46a4a, 0x6e6599, 0x4f789e, 0xa67c3d, 0x987070];
   return palette[[...id].reduce((sum, letter) => sum + letter.charCodeAt(0), 0) % palette.length];
 };
 
-function drawOffice(app: Application) {
-  app.stage.addChild(new Graphics().roundRect(12, 12, OFFICE_WIDTH - 24, OFFICE_HEIGHT - 24, 18).fill(0xe8e2d3));
-  for (const zone of ZONES) {
-    app.stage.addChild(
-      new Graphics()
-        .roundRect(zone.x, zone.y, zone.width, zone.height, 14)
-        .fill({ color: zone.color, alpha: 0.68 })
-        .stroke({ width: 2, color: 0x48595a, alpha: 0.3 }),
-    );
-    const label = new Text({
-      text: zone.label,
-      style: new TextStyle({ fontFamily: "monospace", fontSize: 13, fill: 0x364346, fontWeight: "600" }),
-    });
-    label.position.set(zone.x + 12, zone.y + 10);
-    app.stage.addChild(label);
-  }
-  Object.entries(POSITIONS)
-    .filter(([id]) => id.startsWith("desk-"))
-    .forEach(([id, point]) => {
-      app.stage.addChild(new Graphics().roundRect(point.x - 48, point.y - 24, 96, 48, 8).fill(0x88715a));
-      const label = new Text({ text: id.toUpperCase(), style: { fontFamily: "monospace", fontSize: 10, fill: 0xf3ead9 } });
-      label.anchor.set(0.5);
-      label.position.set(point.x, point.y);
-      app.stage.addChild(label);
-    });
-  const hour = new Date().getHours();
-  if (hour < 7 || hour >= 19) {
-    app.stage.addChild(new Graphics().roundRect(12, 12, OFFICE_WIDTH - 24, OFFICE_HEIGHT - 24, 18).fill({ color: 0x182a46, alpha: 0.2 }));
-  }
-  for (const [x, y] of [[158, 26], [798, 446], [1080, 226]]) {
-    app.stage.addChild(new Graphics().circle(x, y, 5).fill(0x6d8b72));
-  }
-}
+const shortName = (name: string): string => name.length > 15 ? `${name.slice(0, 13)}…` : name;
 
 function createRenderedAgent(agent: Agent, selectAgent: (id: string) => void): RenderedAgent {
   const container = new Container();
   container.eventMode = "static";
   container.cursor = "pointer";
   container.on("pointertap", () => selectAgent(agent.id));
-  const shadow = new Graphics().ellipse(0, 19, 22, 8).fill({ color: 0x263236, alpha: 0.25 });
-  const body = new Graphics()
-    .roundRect(-18, -22, 36, 42, 12)
-    .fill(agentColor(agent.id))
-    .circle(-7, -5, 2.4)
-    .circle(7, -5, 2.4)
-    .fill(0xf7ead4);
-  const name = new Text({ text: agent.name, style: { fontFamily: "system-ui", fontSize: 13, fill: 0x17262b, fontWeight: "600" } });
+  const color = agentColor(agent.id);
+  const shadow = new Graphics().ellipse(0, 19, 22, 8).fill({ color: 0x263236, alpha: 0.22 });
+  const body = new Container();
+  const legs = new Graphics()
+    .roundRect(-12, 5, 9, 17, 4)
+    .roundRect(3, 5, 9, 17, 4)
+    .fill(0x334447)
+    .roundRect(-15, 17, 12, 6, 3)
+    .roundRect(3, 17, 12, 6, 3)
+    .fill(0x263234);
+  const torso = new Graphics()
+    .roundRect(-18, -19, 36, 31, 10)
+    .fill(color)
+    .roundRect(-23, -14, 7, 25, 4)
+    .roundRect(16, -14, 7, 25, 4)
+    .fill(color)
+    .roundRect(-5, -15, 10, 13, 2)
+    .fill({ color: 0xf5e7c9, alpha: 0.9 });
+  const head = new Graphics()
+    .circle(0, -31, 15)
+    .fill(0xf0c9a5)
+    .arc(0, -34, 15, Math.PI, Math.PI * 2)
+    .fill(0x42352f)
+    .circle(-5, -30, 1.6)
+    .circle(5, -30, 1.6)
+    .fill(0x253234)
+    .moveTo(-4, -24)
+    .quadraticCurveTo(0, -21, 4, -24)
+    .stroke({ width: 1.5, color: 0x9b604f });
+  body.addChild(legs, torso, head);
+
+  const namePlate = new Graphics()
+    .roundRect(-48, 29, 96, 19, 7)
+    .fill({ color: 0xf8f2e6, alpha: 0.95 })
+    .stroke({ width: 1, color: 0x314649, alpha: 0.3 });
+  const name = new Text({ text: shortName(agent.name), style: { fontFamily: "system-ui", fontSize: 11, fill: 0x17262b, fontWeight: "600" } });
   name.anchor.set(0.5);
-  name.position.set(0, 32);
-  const status = new Text({ text: agent.status, style: { fontFamily: "monospace", fontSize: 10, fill: 0x425457 } });
+  name.position.set(0, 38);
+  const status = new Text({ text: agent.status.toUpperCase(), style: { fontFamily: "monospace", fontSize: 8, fill: 0xe8f2ed, fontWeight: "600" } });
   status.anchor.set(0.5);
-  status.position.set(0, 48);
-  container.addChild(shadow, body, name, status);
+  status.position.set(0, 54);
+  const statusPlate = new Graphics().roundRect(-33, 48, 66, 14, 7).fill({ color: 0x304b4d, alpha: 0.94 });
+  container.addChild(shadow, body, namePlate, name, statusPlate, status);
   container.position.set(POSITIONS.entrance.x, POSITIONS.entrance.y);
-  return { container, body, name, status, path: [], targetZone: "entrance", animation: "entering", phase: Math.random() * Math.PI * 2 };
+  return {
+    container,
+    body,
+    name,
+    status,
+    path: [],
+    targetZone: "entrance",
+    targetPoint: POSITIONS.entrance,
+    animation: "entering",
+    phase: Math.random() * Math.PI * 2,
+  };
 }
 
 export function OfficeScene({ agents, deskCount }: OfficeSceneProps) {
@@ -104,7 +113,8 @@ export function OfficeScene({ agents, deskCount }: OfficeSceneProps) {
       if (cancelled) return app.destroy();
       app.canvas.className = "office-canvas";
       host.appendChild(app.canvas);
-      drawOffice(app);
+      app.stage.sortableChildren = true;
+      drawOfficeScenery(app);
       appRef.current = app;
       app.ticker.add((ticker) => {
         for (const rendered of renderedAgents.values()) {
@@ -125,6 +135,7 @@ export function OfficeScene({ agents, deskCount }: OfficeSceneProps) {
           rendered.body.y = active ? Math.sin(time * 2) * 1.5 : 0;
           rendered.body.rotation = rendered.animation === "celebration" ? Math.sin(time * 2) * 0.12 : 0;
           rendered.body.alpha = rendered.animation === "error" ? 0.65 + Math.sin(time * 3) * 0.3 : 1;
+          rendered.container.zIndex = 100 + Math.round(rendered.container.y);
         }
       });
       setReady(true);
@@ -150,26 +161,36 @@ export function OfficeScene({ agents, deskCount }: OfficeSceneProps) {
         assignmentsRef.current.delete(agentId);
       }
     }
-    for (const agent of agents) {
+    const availableDesks = Math.max(1, Math.min(deskCount, 8));
+    const projections = agents.map((agent) => ({
+      agent,
+      visual: visualFor(agent.status, assignDesk(agent.id, assignmentsRef.current, availableDesks)),
+    }));
+    const targetPositions = spreadAgentTargets(
+      projections.map(({ agent, visual }) => ({ id: agent.id, zone: visual.zone })),
+    );
+
+    for (const { agent, visual } of projections) {
       let rendered = renderedRef.current.get(agent.id);
       if (!rendered) {
         rendered = createRenderedAgent(agent, selectAgent);
         renderedRef.current.set(agent.id, rendered);
         app.stage.addChild(rendered.container);
       }
-      rendered.name.text = agent.name;
-      rendered.status.text = agent.status;
-      const availableDesks = Math.max(1, Math.min(deskCount, 8));
-      const visual = visualFor(
-        agent.status,
-        assignDesk(agent.id, assignmentsRef.current, availableDesks),
-      );
+      rendered.name.text = shortName(agent.name);
+      rendered.status.text = agent.status.toUpperCase();
       rendered.animation = visual.animation;
-      if (visual.zone !== rendered.targetZone) {
+      const target = targetPositions.get(agent.id) ?? POSITIONS.entrance;
+      if (
+        visual.zone !== rendered.targetZone
+        || target.x !== rendered.targetPoint.x
+        || target.y !== rendered.targetPoint.y
+      ) {
         rendered.targetZone = visual.zone;
+        rendered.targetPoint = target;
         rendered.path = routeBetween(
           { x: rendered.container.x, y: rendered.container.y },
-          POSITIONS[visual.zone] ?? POSITIONS.entrance,
+          target,
         );
       }
     }
