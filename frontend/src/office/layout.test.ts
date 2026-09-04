@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { assignDesk, spreadAgentTargets } from "./layout";
+import { assignDesk, separateAgentPositions, spreadAgentTargets } from "./layout";
 
 describe("assignDesk", () => {
   it("uses each available desk before sharing one", () => {
@@ -30,6 +30,32 @@ describe("spreadAgentTargets", () => {
     expect(new Set([...positions.values()].map(({ x, y }) => `${x},${y}`)).size).toBe(3);
     for (const target of targets) {
       expect(reversed.get(target.id)).toEqual(positions.get(target.id));
+    }
+    const values = [...positions.values()];
+    for (let left = 0; left < values.length; left += 1) {
+      for (let right = left + 1; right < values.length; right += 1) {
+        const deltaX = Math.abs(values[left].x - values[right].x);
+        const deltaY = Math.abs(values[left].y - values[right].y);
+        expect(deltaX >= 100 || deltaY >= 110).toBe(true);
+      }
+    }
+  });
+
+  it("separates agents that meet while walking", () => {
+    const positions = separateAgentPositions([
+      { id: "alpha", x: 500, y: 300 },
+      { id: "bravo", x: 500, y: 300 },
+      { id: "charlie", x: 500, y: 300 },
+    ]);
+    const values = [...positions.values()];
+
+    for (let left = 0; left < values.length; left += 1) {
+      for (let right = left + 1; right < values.length; right += 1) {
+        expect(Math.hypot(
+          values[left].x - values[right].x,
+          values[left].y - values[right].y,
+        )).toBeGreaterThanOrEqual(49.9);
+      }
     }
   });
 });

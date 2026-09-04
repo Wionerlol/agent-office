@@ -1,4 +1,4 @@
-import type { Point } from "./layout";
+import { POSITIONS, type Point } from "./layout";
 
 export interface GridPoint {
   x: number;
@@ -59,27 +59,78 @@ export function findPath(
   return [start, goal];
 }
 
-const GRID_WIDTH = 12;
-const GRID_HEIGHT = 8;
-const CELL_WIDTH = 1100 / GRID_WIDTH;
-const CELL_HEIGHT = 680 / GRID_HEIGHT;
-const BLOCKED = new Set(["2,2", "4,2", "6,2", "3,4", "6,4"]);
+interface Obstacle {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+const CELL_SIZE = 25;
+const GRID_WIDTH = 44;
+const GRID_HEIGHT = 28;
+const AGENT_PADDING = 8;
+const WALLS: Obstacle[] = [
+  { x: 151, y: 20, width: 14, height: 145 },
+  { x: 151, y: 215, width: 14, height: 45 },
+  { x: 151, y: 408, width: 14, height: 252 },
+  { x: 790, y: 20, width: 14, height: 145 },
+  { x: 790, y: 215, width: 14, height: 18 },
+  { x: 804, y: 219, width: 96, height: 14 },
+  { x: 950, y: 219, width: 130, height: 14 },
+  { x: 813, y: 219, width: 14, height: 121 },
+  { x: 813, y: 390, width: 14, height: 86 },
+  { x: 158, y: 437, width: 82, height: 14 },
+  { x: 310, y: 437, width: 120, height: 14 },
+  { x: 500, y: 437, width: 150, height: 14 },
+  { x: 720, y: 437, width: 107, height: 14 },
+];
+const FURNITURE: Obstacle[] = [
+  ...Object.entries(POSITIONS)
+    .filter(([id]) => id.startsWith("desk-"))
+    .map(([, point]) => ({ x: point.x - 54, y: point.y - 108, width: 108, height: 91 })),
+  { x: 834, y: 74, width: 204, height: 34 },
+  { x: 1039, y: 116, width: 20, height: 78 },
+  { x: 188, y: 459, width: 145, height: 65 },
+  { x: 400, y: 493, width: 46, height: 118 },
+  { x: 510, y: 493, width: 48, height: 118 },
+  { x: 620, y: 482, width: 155, height: 68 },
+  { x: 850, y: 274, width: 190, height: 60 },
+  { x: 854, y: 404, width: 182, height: 42 },
+  { x: 42, y: 283, width: 88, height: 63 },
+];
+
+function officeBlocked(start: GridPoint, goal: GridPoint): Set<string> {
+  const blocked = new Set<string>();
+  for (let y = 0; y < GRID_HEIGHT; y += 1) {
+    for (let x = 0; x < GRID_WIDTH; x += 1) {
+      const point = { x: (x + 0.5) * CELL_SIZE, y: (y + 0.5) * CELL_SIZE };
+      if ([...WALLS, ...FURNITURE].some((obstacle) =>
+        point.x >= obstacle.x - AGENT_PADDING
+        && point.x <= obstacle.x + obstacle.width + AGENT_PADDING
+        && point.y >= obstacle.y - AGENT_PADDING
+        && point.y <= obstacle.y + obstacle.height + AGENT_PADDING
+      )) blocked.add(key({ x, y }));
+    }
+  }
+  blocked.delete(key(start));
+  blocked.delete(key(goal));
+  return blocked;
+}
 
 export function routeBetween(start: Point, goal: Point): Point[] {
   const toGrid = (point: Point): GridPoint => ({
-    x: Math.max(0, Math.min(GRID_WIDTH - 1, Math.floor(point.x / CELL_WIDTH))),
-    y: Math.max(0, Math.min(GRID_HEIGHT - 1, Math.floor(point.y / CELL_HEIGHT))),
+    x: Math.max(0, Math.min(GRID_WIDTH - 1, Math.floor(point.x / CELL_SIZE))),
+    y: Math.max(0, Math.min(GRID_HEIGHT - 1, Math.floor(point.y / CELL_SIZE))),
   });
   const startCell = toGrid(start);
   const goalCell = toGrid(goal);
-  const blocked = new Set(BLOCKED);
-  blocked.delete(key(startCell));
-  blocked.delete(key(goalCell));
+  const blocked = officeBlocked(startCell, goalCell);
   const cells = findPath(startCell, goalCell, blocked, GRID_WIDTH, GRID_HEIGHT);
   return [
     ...cells.slice(1, -1).map((cell) => ({
-      x: (cell.x + 0.5) * CELL_WIDTH,
-      y: (cell.y + 0.5) * CELL_HEIGHT,
+      x: (cell.x + 0.5) * CELL_SIZE,
+      y: (cell.y + 0.5) * CELL_SIZE,
     })),
     goal,
   ];

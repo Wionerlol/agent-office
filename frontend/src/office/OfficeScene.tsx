@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 
 import type { Agent } from "../models/agent";
 import { useAgentStore } from "../store/agents";
-import { assignDesk, OFFICE_HEIGHT, OFFICE_WIDTH, POSITIONS, spreadAgentTargets, type Point } from "./layout";
+import { assignDesk, OFFICE_HEIGHT, OFFICE_WIDTH, POSITIONS, separateAgentPositions, spreadAgentTargets, type Point } from "./layout";
 import { routeBetween } from "./navigation";
 import { drawOfficeScenery } from "./scenery";
 import { visualFor, type VisualState } from "./visual";
@@ -136,6 +136,17 @@ export function OfficeScene({ agents, deskCount }: OfficeSceneProps) {
           rendered.body.rotation = rendered.animation === "celebration" ? Math.sin(time * 2) * 0.12 : 0;
           rendered.body.alpha = rendered.animation === "error" ? 0.65 + Math.sin(time * 3) * 0.3 : 1;
           rendered.container.zIndex = 100 + Math.round(rendered.container.y);
+        }
+        const separated = separateAgentPositions(
+          [...renderedAgents].map(([id, rendered]) => ({
+            id,
+            x: rendered.container.x,
+            y: rendered.container.y,
+          })),
+        );
+        for (const [id, point] of separated) {
+          const rendered = renderedAgents.get(id);
+          if (rendered) rendered.container.position.set(point.x, point.y);
         }
       });
       setReady(true);

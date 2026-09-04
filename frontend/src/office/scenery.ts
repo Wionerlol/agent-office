@@ -62,9 +62,13 @@ function drawRooms(scene: Container): void {
   const walls = new Graphics();
   walls.roundRect(16, 16, OFFICE_WIDTH - 32, OFFICE_HEIGHT - 32, 16).stroke({ width: 10, color: COLORS.wall });
   walls.roundRect(22, 22, OFFICE_WIDTH - 44, OFFICE_HEIGHT - 44, 12).stroke({ width: 3, color: COLORS.wallTop });
-  walls.moveTo(158, 28).lineTo(158, 262).moveTo(158, 408).lineTo(158, 652);
-  walls.moveTo(796, 28).lineTo(796, 226).moveTo(820, 226).lineTo(1074, 226);
-  walls.moveTo(820, 226).lineTo(820, 476).moveTo(158, 444).lineTo(820, 444);
+  walls.moveTo(158, 28).lineTo(158, 165).moveTo(158, 215).lineTo(158, 260);
+  walls.moveTo(158, 408).lineTo(158, 652);
+  walls.moveTo(797, 28).lineTo(797, 165).moveTo(797, 215).lineTo(797, 226);
+  walls.moveTo(804, 226).lineTo(900, 226).moveTo(950, 226).lineTo(1074, 226);
+  walls.moveTo(820, 226).lineTo(820, 340).moveTo(820, 390).lineTo(820, 476);
+  walls.moveTo(158, 444).lineTo(240, 444).moveTo(310, 444).lineTo(430, 444);
+  walls.moveTo(500, 444).lineTo(650, 444).moveTo(720, 444).lineTo(820, 444);
   walls.stroke({ width: 7, color: COLORS.wall });
   scene.addChild(walls);
 
@@ -117,7 +121,7 @@ function drawLibrary(scene: Container): void {
     const colors = [0xa9574d, 0x567c73, 0xc1954c, 0x6e6386];
     shelf.rect(x, 79, 9, 23).fill(colors[Math.floor(x / 13) % colors.length]);
   }
-  for (const x of [834, 1013]) {
+  for (const x of [1039]) {
     shelf.roundRect(x, 116, 25, 78, 3).fill(0x795a42);
     for (let y = 123; y < 187; y += 14) {
       shelf.rect(x + 5, y, 15, 9).fill(y % 28 ? 0xa9574d : 0x567c73);
@@ -219,18 +223,37 @@ function drawLighting(scene: Container): void {
   }
 }
 
+function drawForeground(scene: Container): void {
+  const foreground = new Graphics();
+  for (const point of Object.entries(POSITIONS)
+    .filter(([id]) => id.startsWith("desk-"))
+    .map(([, point]) => point)) {
+    foreground.roundRect(point.x - 54, point.y - 29, 108, 12, 3).fill(0x76563e);
+  }
+  foreground.roundRect(46, 326, 80, 15, 4).fill(0x76563e);
+  foreground.roundRect(188, 510, 145, 14, 3).fill(0x71513d);
+  foreground.roundRect(442, 559, 73, 18, 8).fill(0x8e684e);
+  foreground.roundRect(854, 430, 182, 16, 3).fill(0x806b55);
+  scene.addChild(foreground);
+}
+
 export function drawOfficeScenery(app: Application): void {
-  const scene = new Container();
-  drawFloor(scene);
-  drawRooms(scene);
-  drawOpenOffice(scene);
-  drawLibrary(scene);
-  drawCoffeeArea(scene);
-  drawLounge(scene);
-  drawToolLab(scene);
-  drawTestLab(scene);
-  drawReception(scene);
-  drawDetails(scene);
-  drawLighting(scene);
-  app.stage.addChild(scene);
+  const background = new Container();
+  background.zIndex = 0;
+  drawFloor(background);
+  drawRooms(background);
+  drawOpenOffice(background);
+  drawLibrary(background);
+  drawCoffeeArea(background);
+  drawLounge(background);
+  drawToolLab(background);
+  drawTestLab(background);
+  drawReception(background);
+  drawDetails(background);
+  drawLighting(background);
+
+  const foreground = new Container();
+  foreground.zIndex = 900;
+  drawForeground(foreground);
+  app.stage.addChild(background, foreground);
 }

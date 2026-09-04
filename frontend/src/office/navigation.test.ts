@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { findPath } from "./navigation";
+import { findPath, routeBetween } from "./navigation";
 
 describe("findPath", () => {
   it("routes around blocked office cells", () => {
@@ -16,5 +16,21 @@ describe("findPath", () => {
     expect(path.at(-1)).toEqual({ x: 4, y: 1 });
     expect(path).not.toContainEqual({ x: 2, y: 1 });
     expect(path.length).toBe(7);
+  });
+});
+
+describe("office routing", () => {
+  it("enters the library through its doorway instead of crossing the wall", () => {
+    const start = { x: 700, y: 160 };
+    const path = [start, ...routeBetween(start, { x: 942, y: 169 })];
+    const dividerX = 796;
+    const crossingY = path.slice(1).flatMap((point, index) => {
+      const previous = path[index];
+      if ((previous.x - dividerX) * (point.x - dividerX) > 0) return [];
+      const progress = (dividerX - previous.x) / (point.x - previous.x);
+      return previous.y + (point.y - previous.y) * progress;
+    });
+
+    expect(crossingY.some((y) => y >= 165 && y <= 215)).toBe(true);
   });
 });

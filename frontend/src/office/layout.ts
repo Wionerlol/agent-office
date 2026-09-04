@@ -51,17 +51,17 @@ export const POSITIONS: Record<string, Point> = {
 };
 
 const SPREAD_BY_ZONE: Record<string, { columns: number; gapX: number; gapY: number }> = {
-  entrance: { columns: 2, gapX: 48, gapY: 54 },
-  library: { columns: 3, gapX: 64, gapY: 58 },
-  coffee_area: { columns: 2, gapX: 62, gapY: 58 },
-  lounge: { columns: 3, gapX: 58, gapY: 58 },
-  tool_lab: { columns: 3, gapX: 60, gapY: 58 },
-  test_lab: { columns: 3, gapX: 62, gapY: 58 },
-  exit: { columns: 2, gapX: 50, gapY: 54 },
+  entrance: { columns: 2, gapX: 100, gapY: 110 },
+  library: { columns: 3, gapX: 100, gapY: 110 },
+  coffee_area: { columns: 2, gapX: 100, gapY: 110 },
+  lounge: { columns: 2, gapX: 100, gapY: 110 },
+  tool_lab: { columns: 2, gapX: 100, gapY: 110 },
+  test_lab: { columns: 2, gapX: 100, gapY: 110 },
+  exit: { columns: 2, gapX: 100, gapY: 110 },
 };
 
 function spreadAround(anchor: Point, count: number, zone: string): Point[] {
-  const config = SPREAD_BY_ZONE[zone] ?? { columns: 2, gapX: 46, gapY: 48 };
+  const config = SPREAD_BY_ZONE[zone] ?? { columns: 2, gapX: 100, gapY: 110 };
   const columns = Math.min(config.columns, count);
   const rows = Math.ceil(count / columns);
   return Array.from({ length: count }, (_, index) => {
@@ -89,6 +89,41 @@ export function spreadAgentTargets(targets: readonly AgentTarget[]): Map<string,
     const sortedIds = [...occupantIds].sort((left, right) => left.localeCompare(right));
     const slots = spreadAround(anchor, sortedIds.length, zone);
     sortedIds.forEach((id, index) => positions.set(id, slots[index]));
+  }
+  return positions;
+}
+
+export function separateAgentPositions(
+  agents: readonly (Point & { id: string })[],
+  minimumDistance = 50,
+): Map<string, Point> {
+  const positions = new Map(
+    [...agents]
+      .sort((left, right) => left.id.localeCompare(right.id))
+      .map(({ id, x, y }) => [id, { x, y }]),
+  );
+  const ids = [...positions.keys()];
+  for (let pass = 0; pass < 6; pass += 1) {
+    for (let left = 0; left < ids.length; left += 1) {
+      for (let right = left + 1; right < ids.length; right += 1) {
+        const first = positions.get(ids[left])!;
+        const second = positions.get(ids[right])!;
+        let deltaX = second.x - first.x;
+        let deltaY = second.y - first.y;
+        let distance = Math.hypot(deltaX, deltaY);
+        if (distance >= minimumDistance) continue;
+        if (distance === 0) {
+          deltaX = 1;
+          deltaY = 0;
+          distance = 1;
+        }
+        const correction = (minimumDistance - distance) / 2;
+        const offsetX = (deltaX / distance) * correction;
+        const offsetY = (deltaY / distance) * correction;
+        positions.set(ids[left], { x: first.x - offsetX, y: first.y - offsetY });
+        positions.set(ids[right], { x: second.x + offsetX, y: second.y + offsetY });
+      }
+    }
   }
   return positions;
 }
