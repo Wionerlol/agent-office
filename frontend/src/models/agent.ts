@@ -44,3 +44,21 @@ export interface ProjectInfo {
   path: string;
   branch?: string | null;
 }
+
+export interface CodexUsageWindow {
+  used_percent: number;
+  remaining_percent: number;
+  window_minutes: number;
+  resets_at: string;
+}
+
+export interface CodexUsage {
+  status: "available" | "unavailable";
+  remaining_percent: number | null;
+  limiting_window: string | null;
+  primary: CodexUsageWindow | null;
+  secondary: CodexUsageWindow | null;
+  individual: CodexUsageWindow | null;
+  plan_type: string | null;
+  updated_at: string | null;
+}

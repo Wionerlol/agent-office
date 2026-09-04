@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-import type { Agent, AgentEvent, AgentState, ProjectInfo } from "../models/agent";
+import type { Agent, AgentEvent, AgentState, CodexUsage, ProjectInfo } from "../models/agent";
 
 export type ConnectionState = "connected" | "reconnecting" | "disconnected" | "simulation" | "replay";
 
@@ -15,6 +15,7 @@ interface AgentStore {
   simulationPaused: boolean;
   replayMode: boolean;
   deskCount: number;
+  codexUsage: CodexUsage | null;
   addAgent: (agent: Agent) => void;
   removeAgent: (id: string) => void;
   updateAgent: (id: string, changes: Partial<Agent>) => void;
@@ -29,6 +30,7 @@ interface AgentStore {
   setSimulationPaused: (paused: boolean) => void;
   setReplayMode: (enabled: boolean) => void;
   setDeskCount: (count: number) => void;
+  setCodexUsage: (usage: CodexUsage) => void;
   reset: () => void;
 }
 
@@ -43,6 +45,7 @@ const initialState = {
   simulationPaused: false,
   replayMode: false,
   deskCount: 8,
+  codexUsage: null,
 };
 
 export const useAgentStore = create<AgentStore>((set) => ({
@@ -89,5 +92,6 @@ export const useAgentStore = create<AgentStore>((set) => ({
   setSimulationPaused: (simulationPaused) => set({ simulationPaused }),
   setReplayMode: (replayMode) => set({ replayMode, connection: replayMode ? "replay" : "connected" }),
   setDeskCount: (deskCount) => set({ deskCount }),
+  setCodexUsage: (codexUsage) => set({ codexUsage }),
   reset: () => set(initialState),
 }));

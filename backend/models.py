@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Any, Self
+from typing import Any, Literal, Self
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -72,3 +72,21 @@ class ProjectInfo(BaseModel):
     name: str
     path: str
     branch: str | None = None
+
+
+class CodexUsageWindow(BaseModel):
+    used_percent: float = Field(ge=0, le=100)
+    remaining_percent: float = Field(ge=0, le=100)
+    window_minutes: int = Field(gt=0)
+    resets_at: datetime
+
+
+class CodexUsage(BaseModel):
+    status: Literal["available", "unavailable"]
+    remaining_percent: float | None = Field(default=None, ge=0, le=100)
+    limiting_window: str | None = None
+    primary: CodexUsageWindow | None = None
+    secondary: CodexUsageWindow | None = None
+    individual: CodexUsageWindow | None = None
+    plan_type: str | None = None
+    updated_at: datetime | None = None

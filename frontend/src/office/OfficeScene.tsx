@@ -1,16 +1,18 @@
 import { Application, Container, Graphics, Text } from "pixi.js";
 import { useEffect, useRef, useState } from "react";
 
-import type { Agent } from "../models/agent";
+import type { Agent, CodexUsage } from "../models/agent";
 import { useAgentStore } from "../store/agents";
+import { atmosphereForUsage } from "./atmosphere";
 import { assignDesk, OFFICE_HEIGHT, OFFICE_WIDTH, POSITIONS, separateAgentPositions, spreadAgentTargets, type Point } from "./layout";
 import { isOfficePositionWalkable, routeBetween } from "./navigation";
-import { drawOfficeScenery } from "./scenery";
+import { drawOfficeScenery, type OfficeScenery } from "./scenery";
 import { visualFor, type VisualState } from "./visual";
 
 interface OfficeSceneProps {
   agents: Agent[];
   deskCount: number;
+  usage?: CodexUsage | null;
 }
 
 interface RenderedAgent {
@@ -100,13 +102,17 @@ function createRenderedAgent(agent: Agent, selectAgent: (id: string) => void): R
   };
 }
 
-export function OfficeScene({ agents, deskCount }: OfficeSceneProps) {
+export function OfficeScene({ agents, deskCount, usage = null }: OfficeSceneProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const appRef = useRef<Application | null>(null);
+  const sceneryRef = useRef<OfficeScenery | null>(null);
   const renderedRef = useRef(new Map<string, RenderedAgent>());
   const assignmentsRef = useRef(new Map<string, string>());
   const [ready, setReady] = useState(false);
   const selectAgent = useAgentStore((state) => state.selectAgent);
+  const atmosphere = atmosphereForUsage(usage?.remaining_percent ?? null);
+  const atmosphereRef = useRef(atmosphere);
+  atmosphereRef.current = atmosphere;
 
   useEffect(() => {
     const host = hostRef.current;
@@ -122,7 +128,7 @@ export function OfficeScene({ agents, deskCount }: OfficeSceneProps) {
       app.canvas.style.height = "100%";
       host.appendChild(app.canvas);
       app.stage.sortableChildren = true;
-      drawOfficeScenery(app);
+      sceneryRef.current = drawOfficeScenery(app, atmosphereRef.current);
       appRef.current = app;
       app.ticker.add((ticker) => {
         for (const rendered of renderedAgents.values()) {
@@ -173,9 +179,14 @@ export function OfficeScene({ agents, deskCount }: OfficeSceneProps) {
       renderedAgents.clear();
       deskAssignments.clear();
       appRef.current = null;
+      sceneryRef.current = null;
       if (app.renderer) app.destroy(true, { children: true });
     };
   }, []);
+
+  useEffect(() => {
+    if (ready) sceneryRef.current?.setAtmosphere(atmosphere);
+  }, [atmosphere, ready]);
 
   useEffect(() => {
     const app = appRef.current;

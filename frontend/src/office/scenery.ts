@@ -1,6 +1,7 @@
 import { Application, Container, Graphics, Text, TextStyle } from "pixi.js";
 
 import { OFFICE_HEIGHT, OFFICE_WIDTH, POSITIONS, ZONES, type Point } from "./layout";
+import type { OfficeAtmosphere } from "./atmosphere";
 
 const COLORS = {
   ink: 0x263335,
@@ -14,6 +15,42 @@ const COLORS = {
   plant: 0x52745c,
   pot: 0xa86448,
 };
+
+const WINDOW = { x: 182, y: 38, width: 600, height: 132 };
+
+const ATMOSPHERE_COLORS: Record<OfficeAtmosphere, {
+  skyTop: number;
+  skyBottom: number;
+  skyline: number;
+  distant: number;
+  windowLight: number;
+}> = {
+  day: {
+    skyTop: 0x70bfe1,
+    skyBottom: 0xd8edf2,
+    skyline: 0x536c76,
+    distant: 0x78909a,
+    windowLight: 0xdceef1,
+  },
+  dusk: {
+    skyTop: 0x735d91,
+    skyBottom: 0xf0a06f,
+    skyline: 0x394653,
+    distant: 0x5f6472,
+    windowLight: 0xffc56e,
+  },
+  night: {
+    skyTop: 0x101c3d,
+    skyBottom: 0x29395d,
+    skyline: 0x17232d,
+    distant: 0x273746,
+    windowLight: 0xffd57a,
+  },
+};
+
+export interface OfficeScenery {
+  setAtmosphere: (atmosphere: OfficeAtmosphere) => void;
+}
 
 function label(text: string, x: number, y: number, options: { size?: number; color?: number; weight?: "400" | "600" | "700"; anchor?: number } = {}): Text {
   const item = new Text({
@@ -72,13 +109,6 @@ function drawRooms(scene: Container): void {
   walls.stroke({ width: 7, color: COLORS.wall });
   scene.addChild(walls);
 
-  const windows = new Graphics();
-  for (const x of [226, 404, 582, 858]) {
-    windows.roundRect(x, 17, 112, 12, 3).fill(0x91bed0).stroke({ width: 2, color: 0xe5f1ef });
-    windows.moveTo(x + 56, 19).lineTo(x + 56, 27).stroke({ width: 1, color: 0xd4e7e8 });
-  }
-  scene.addChild(windows);
-
   const door = new Graphics();
   door.rect(1060, 536, 12, 92).fill(0x6e5140).rect(1050, 540, 10, 84).fill(0xb9d4cf);
   door.circle(1054, 584, 3).fill(0xd9b867);
@@ -102,13 +132,6 @@ function drawDesk(scene: Container, id: string, point: Point): void {
 }
 
 function drawOpenOffice(scene: Container): void {
-  const whiteboard = new Graphics()
-    .roundRect(205, 55, 170, 48, 4)
-    .fill(0xf4f2e9)
-    .stroke({ width: 3, color: 0x7c8987 });
-  whiteboard.moveTo(223, 86).lineTo(275, 68).lineTo(324, 87).lineTo(352, 66).stroke({ width: 2, color: 0x5b8c86 });
-  scene.addChild(whiteboard);
-
   Object.entries(POSITIONS)
     .filter(([id]) => id.startsWith("desk-"))
     .forEach(([id, point]) => drawDesk(scene, id, point));
@@ -202,20 +225,85 @@ function drawDetails(scene: Container): void {
   scene.addChild(clock);
 }
 
-function drawLighting(scene: Container): void {
-  const hour = new Date().getHours();
-  if (hour < 7 || hour >= 19) {
-    scene.addChild(
-      new Graphics()
-        .roundRect(22, 22, OFFICE_WIDTH - 44, OFFICE_HEIGHT - 44, 14)
-        .fill({ color: 0x11243b, alpha: 0.2 }),
-    );
-    const lights = new Graphics();
-    for (const [x, y] of [[320, 230], [620, 230], [930, 360], [480, 555]]) {
-      lights.circle(x, y, 82).fill({ color: 0xffe5a4, alpha: 0.055 });
-    }
-    scene.addChild(lights);
+function drawCctvHeadquarters(city: Graphics, atmosphere: OfficeAtmosphere): void {
+  const building = atmosphere === "day" ? 0x526b77 : 0x202a39;
+  const highlight = atmosphere === "night" ? 0xe8b85d : 0x9fc1cb;
+  city
+    .moveTo(613, 160).lineTo(638, 160).lineTo(661, 77).lineTo(638, 77).closePath().fill(building)
+    .moveTo(687, 160).lineTo(712, 160).lineTo(681, 77).lineTo(658, 77).closePath().fill(building)
+    .moveTo(638, 77).lineTo(647, 55).lineTo(696, 55).lineTo(681, 77).closePath().fill(building);
+  for (const y of [91, 111, 132, 151]) {
+    city.moveTo(622 + (160 - y) * 0.28, y).lineTo(700 - (160 - y) * 0.28, y);
   }
+  city.moveTo(640, 61).lineTo(684, 73).moveTo(653, 57).lineTo(695, 68);
+  city.stroke({ width: 1.4, color: highlight, alpha: 0.65 });
+}
+
+function drawCityWindow(scene: Container, atmosphere: OfficeAtmosphere): void {
+  const palette = ATMOSPHERE_COLORS[atmosphere];
+  const city = new Graphics();
+  city.roundRect(WINDOW.x - 7, WINDOW.y - 7, WINDOW.width + 14, WINDOW.height + 16, 5).fill(0x314247);
+  city.rect(WINDOW.x, WINDOW.y, WINDOW.width, WINDOW.height).fill(palette.skyTop);
+  city.rect(WINDOW.x, WINDOW.y + 60, WINDOW.width, WINDOW.height - 60).fill(palette.skyBottom);
+
+  if (atmosphere === "day") {
+    city.circle(725, 67, 20).fill({ color: 0xffedab, alpha: 0.95 });
+    city.ellipse(286, 72, 42, 10).fill({ color: 0xffffff, alpha: 0.4 });
+  } else if (atmosphere === "dusk") {
+    city.circle(720, 96, 18).fill({ color: 0xffce72, alpha: 0.92 });
+  } else {
+    city.circle(724, 68, 15).fill(0xf3edcf);
+    city.circle(731, 62, 15).fill(palette.skyTop);
+    for (const [x, y] of [[235, 58], [302, 85], [354, 55], [429, 73], [520, 60], [754, 91]]) {
+      city.circle(x, y, 1.4).fill({ color: 0xfff4c3, alpha: 0.9 });
+    }
+  }
+
+  const distantBuildings = [
+    [190, 116, 38, 54], [232, 102, 54, 68], [291, 124, 34, 46], [330, 91, 50, 79],
+    [386, 111, 44, 59], [436, 82, 58, 88], [500, 119, 42, 51], [548, 96, 52, 74],
+    [721, 110, 53, 60],
+  ] as const;
+  for (const [x, y, width, height] of distantBuildings) {
+    city.rect(x, y, width, height).fill(y < 100 ? palette.skyline : palette.distant);
+    if (atmosphere !== "day") {
+      for (let lightY = y + 9; lightY < y + height - 5; lightY += 13) {
+        for (let lightX = x + 8; lightX < x + width - 4; lightX += 13) {
+          if ((lightX + lightY) % 3) city.rect(lightX, lightY, 3, 4).fill({ color: palette.windowLight, alpha: 0.72 });
+        }
+      }
+    }
+  }
+  drawCctvHeadquarters(city, atmosphere);
+
+  city.rect(WINDOW.x, WINDOW.y + WINDOW.height - 6, WINDOW.width, 8).fill(0x26363b);
+  for (const x of [382, 582]) city.rect(x, WINDOW.y, 7, WINDOW.height).fill({ color: 0x34494f, alpha: 0.86 });
+  city.rect(WINDOW.x, WINDOW.y, WINDOW.width, WINDOW.height).stroke({ width: 4, color: 0xb9c9c9, alpha: 0.82 });
+  city.moveTo(202, 48).lineTo(350, 48).lineTo(260, 154).stroke({ width: 3, color: 0xffffff, alpha: 0.12 });
+  scene.addChild(city, label("BEIJING · CBD", WINDOW.x + 12, WINDOW.y + 10, {
+    size: 8,
+    color: atmosphere === "day" ? 0x345365 : 0xf4d9ae,
+  }));
+}
+
+function drawLighting(scene: Container, atmosphere: OfficeAtmosphere): void {
+  const light = new Graphics();
+  if (atmosphere === "day") {
+    light
+      .moveTo(190, 170).lineTo(780, 170).lineTo(670, 560).lineTo(330, 560).closePath()
+      .fill({ color: 0xfff3c7, alpha: 0.045 });
+  } else {
+    light
+      .roundRect(22, 22, OFFICE_WIDTH - 44, OFFICE_HEIGHT - 44, 14)
+      .fill({ color: atmosphere === "dusk" ? 0x7d4058 : 0x0d1c38, alpha: atmosphere === "dusk" ? 0.13 : 0.27 });
+    for (const [x, y] of [[320, 230], [620, 230], [930, 360], [480, 555]]) {
+      light.circle(x, y, atmosphere === "night" ? 102 : 88).fill({
+        color: 0xffd98d,
+        alpha: atmosphere === "night" ? 0.105 : 0.065,
+      });
+    }
+  }
+  scene.addChild(light);
 }
 
 function drawForeground(scene: Container): void {
@@ -233,7 +321,18 @@ function drawForeground(scene: Container): void {
   scene.addChild(foreground);
 }
 
-export function drawOfficeScenery(app: Application): void {
+function replaceAtmosphere(
+  cityLayer: Container,
+  lightingLayer: Container,
+  atmosphere: OfficeAtmosphere,
+): void {
+  for (const child of cityLayer.removeChildren()) child.destroy({ children: true });
+  for (const child of lightingLayer.removeChildren()) child.destroy({ children: true });
+  drawCityWindow(cityLayer, atmosphere);
+  drawLighting(lightingLayer, atmosphere);
+}
+
+export function drawOfficeScenery(app: Application, initialAtmosphere: OfficeAtmosphere = "day"): OfficeScenery {
   const background = new Container();
   background.zIndex = 0;
   drawFloor(background);
@@ -246,10 +345,25 @@ export function drawOfficeScenery(app: Application): void {
   drawTestLab(background);
   drawReception(background);
   drawDetails(background);
-  drawLighting(background);
+
+  const cityLayer = new Container();
+  cityLayer.zIndex = 5;
+
+  const lightingLayer = new Container();
+  lightingLayer.zIndex = 850;
 
   const foreground = new Container();
   foreground.zIndex = 900;
   drawForeground(foreground);
-  app.stage.addChild(background, foreground);
+  replaceAtmosphere(cityLayer, lightingLayer, initialAtmosphere);
+  app.stage.addChild(background, cityLayer, lightingLayer, foreground);
+
+  let currentAtmosphere = initialAtmosphere;
+  return {
+    setAtmosphere(atmosphere) {
+      if (atmosphere === currentAtmosphere) return;
+      currentAtmosphere = atmosphere;
+      replaceAtmosphere(cityLayer, lightingLayer, atmosphere);
+    },
+  };
 }

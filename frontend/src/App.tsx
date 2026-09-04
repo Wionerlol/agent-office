@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { connectOfficeWebSocket, loadProject } from "./api/websocket";
+import { observeCodexUsage } from "./api/usage";
 import { AgentPanel } from "./components/AgentPanel";
 import { Achievements } from "./components/Achievements";
+import { CodexUsageIndicator } from "./components/CodexUsageIndicator";
 import { DebugPanel } from "./components/DebugPanel";
 import { ProjectSelector } from "./components/ProjectSelector";
 import { ReplayControls } from "./components/ReplayControls";
@@ -30,7 +32,12 @@ function App() {
     }
     if (!demoMode) {
       void loadProject().catch(() => undefined);
-      return connectOfficeWebSocket();
+      const disconnect = connectOfficeWebSocket();
+      const stopUsageObserver = observeCodexUsage();
+      return () => {
+        disconnect();
+        stopUsageObserver();
+      };
     }
   }, [demoMode]);
   useSimulation(demoMode);
@@ -42,6 +49,7 @@ function App() {
         <div className="header-actions">
           <ProjectSelector />
           <ReplayControls />
+          <CodexUsageIndicator usage={store.codexUsage} />
           <span className={`connection connection-${store.connection}`}><i />{store.connection}</span>
           <span className="agent-count">{agents.length} agents</span>
           <button onClick={() => setDebugOpen((value) => !value)}>{debugOpen ? "Hide" : "Show"} debug</button>
@@ -50,7 +58,7 @@ function App() {
       <Achievements agents={agents} />
       <section className="workspace">
         <div className="scene-column">
-          <OfficeScene agents={agents} deskCount={store.deskCount} />
+          <OfficeScene agents={agents} deskCount={store.deskCount} usage={store.codexUsage} />
           <DebugPanel agents={agents} enabled={debugOpen} />
         </div>
         <AgentPanel agent={selected} events={store.recentEvents} onClose={() => store.selectAgent(null)} />

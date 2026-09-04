@@ -10,7 +10,8 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend.config import OfficeSettings, Settings
-from backend.models import Agent, AgentEvent, ProjectInfo
+from backend.models import Agent, AgentEvent, CodexUsage, ProjectInfo
+from backend.observer.codex_usage import CodexUsageMonitor
 from backend.observer.git import GitObserver
 from backend.observer.manager import ObserverManager
 from backend.runtime.office import OfficeRuntime
@@ -22,6 +23,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or Settings.load()
     runtime = OfficeRuntime(EventStorage(settings.runtime_path))
     observer = ObserverManager(runtime, settings.observer)
+    usage_monitor = CodexUsageMonitor.from_environment()
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -35,6 +37,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings
     app.state.runtime = runtime
     app.state.observer = observer
+    app.state.usage_monitor = usage_monitor
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[
@@ -77,6 +80,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/api/config")
     async def public_config() -> OfficeSettings:
         return settings.office
+
+    @app.get("/api/codex-usage")
+    async def codex_usage() -> CodexUsage:
+        return await asyncio.to_thread(usage_monitor.snapshot)
 
     @app.post("/api/events")
     async def receive_event(event: AgentEvent) -> dict[str, Any]:

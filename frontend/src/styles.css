@@ -22,6 +22,16 @@ h3 { margin: 1.4rem 0 .5rem; font-size: .88rem; text-transform: uppercase; lette
 .connection, .agent-count { display: inline-flex; align-items: center; gap: 7px; padding: .5rem .75rem; border: 1px solid #4e6466; border-radius: 999px; font: .76rem monospace; text-transform: uppercase; }
 .connection i { width: 8px; height: 8px; border-radius: 50%; background: #d29a54; }
 .connection-connected i { background: #70b27c; }.connection-disconnected i { background: #cb6860; }
+.usage-indicator { display: grid; grid-template-columns: auto auto auto; align-items: center; gap: 8px; min-width: 218px; padding: .4rem .7rem; border: 1px solid #587072; border-radius: 12px; background: #24373a; color: #f5efe1; }
+.usage-icon { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: #f4cb68; color: #5c4826; font-size: 1rem; }
+.usage-copy, .usage-detail { display: grid; gap: 1px; }
+.usage-copy small, .usage-detail small { color: #a9bfbb; font: .62rem monospace; text-transform: uppercase; }
+.usage-copy strong, .usage-detail strong { font: 700 .72rem monospace; white-space: nowrap; }
+.usage-detail { justify-items: end; padding-left: 7px; border-left: 1px solid #4b6263; }
+.usage-dusk { background: #493a47; border-color: #8d6964; }
+.usage-dusk .usage-icon { background: #e69568; color: #fff0d4; }
+.usage-night { background: #18253c; border-color: #475b7b; }
+.usage-night .usage-icon { background: #d9e1d8; color: #27344c; }
 .workspace { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 18px; align-items: start; }
 .scene-column { min-width: 0; }
 .office-scene { aspect-ratio: 1100 / 680; border: 1px solid #4a5f61; border-radius: 18px; overflow: hidden; background: #202d31; box-shadow: 0 18px 50px #0b121580; }
