@@ -11,6 +11,10 @@ export function applyHistoryEvent(event: AgentEvent): void {
     if (agent && typeof agent === "object") store.addAgent(agent as Agent);
   } else if (event.type === "agent.stopped") {
     store.setAgentStatus(event.agent_id, "offline");
+    window.setTimeout(() => {
+      const current = useAgentStore.getState().agents[event.agent_id];
+      if (current?.status === "offline") useAgentStore.getState().removeAgent(event.agent_id);
+    }, 1800);
   } else if (event.type === "agent.state_changed" && isAgentState(event.payload.to)) {
     store.setAgentStatus(event.agent_id, event.payload.to);
   } else if (event.type === "agent.file_changed" && typeof event.payload.file === "string") {

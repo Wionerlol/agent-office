@@ -1,8 +1,10 @@
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Any
+from typing import Any, Self
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
+
+PERSONALITIES = ("Focused", "Curious", "Steady", "Methodical", "Bold")
 
 
 def utc_now() -> datetime:
@@ -39,6 +41,13 @@ class Agent(BaseModel):
     started_at: datetime = Field(default_factory=utc_now)
     last_active_at: datetime = Field(default_factory=utc_now)
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def add_default_personality(self) -> Self:
+        if "personality" not in self.metadata:
+            index = sum(ord(character) for character in self.id) % len(PERSONALITIES)
+            self.metadata = {**self.metadata, "personality": PERSONALITIES[index]}
+        return self
 
 
 class AgentEventType(StrEnum):

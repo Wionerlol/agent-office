@@ -42,10 +42,21 @@ export const POSITIONS: Record<string, Point> = {
   exit: { x: 992, y: 588 },
 };
 
-const DESKS = ["desk-1", "desk-2", "desk-3", "desk-4", "desk-5"];
-
-export function deskFor(agentId: string): string {
-  let hash = 0;
-  for (const character of agentId) hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
-  return DESKS[hash % DESKS.length];
+export function assignDesk(
+  agentId: string,
+  assignments: Map<string, string>,
+  deskCount = 5,
+): string {
+  const existing = assignments.get(agentId);
+  if (existing) return existing;
+  const desks = Array.from({ length: deskCount }, (_, index) => `desk-${index + 1}`);
+  const occupancy = new Map(desks.map((desk) => [desk, 0]));
+  for (const desk of assignments.values()) {
+    occupancy.set(desk, (occupancy.get(desk) ?? 0) + 1);
+  }
+  const desk = desks.reduce((best, candidate) =>
+    (occupancy.get(candidate) ?? 0) < (occupancy.get(best) ?? 0) ? candidate : best,
+  );
+  assignments.set(agentId, desk);
+  return desk;
 }

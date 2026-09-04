@@ -1,10 +1,14 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useAgentStore } from "../store/agents";
 import { applyHistoryEvent } from "./history";
 
 describe("history replay", () => {
-  beforeEach(() => useAgentStore.getState().reset());
+  beforeEach(() => {
+    vi.useFakeTimers();
+    useAgentStore.getState().reset();
+  });
+  afterEach(() => vi.useRealTimers());
 
   it("rebuilds visible state from normalized domain events", () => {
     applyHistoryEvent({
@@ -22,5 +26,15 @@ describe("history replay", () => {
 
     expect(useAgentStore.getState().agents["replay-agent"].status).toBe("testing");
     expect(useAgentStore.getState().recentEvents).toHaveLength(2);
+  });
+
+  it("removes a stopped agent after its exit animation", () => {
+    const now = "2026-09-04T08:00:00Z";
+    useAgentStore.getState().addAgent({ id: "leaver", name: "Leaver", provider: "custom", pid: 8, repository: "/repo", worktree: null, branch: "main", status: "done", task: null, current_tool: null, changed_files: [], started_at: now, last_active_at: now, metadata: {} });
+
+    applyHistoryEvent({ type: "agent.stopped", agent_id: "leaver", timestamp: now, payload: {} });
+    expect(useAgentStore.getState().agents.leaver.status).toBe("offline");
+    vi.advanceTimersByTime(1800);
+    expect(useAgentStore.getState().agents.leaver).toBeUndefined();
   });
 });

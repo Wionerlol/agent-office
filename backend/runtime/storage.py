@@ -1,6 +1,7 @@
 import json
 from collections.abc import Iterable
 from pathlib import Path
+from threading import Lock
 
 from backend.models import AgentEvent
 
@@ -10,17 +11,18 @@ class EventStorage:
 
     def __init__(self, path: Path | str) -> None:
         self.path = Path(path)
+        self._lock = Lock()
 
     def append(self, event: AgentEvent) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with self.path.open("a", encoding="utf-8") as stream:
+        with self._lock, self.path.open("a", encoding="utf-8") as stream:
             stream.write(event.model_dump_json() + "\n")
 
     def read(self) -> list[AgentEvent]:
         if not self.path.exists():
             return []
         events: list[AgentEvent] = []
-        with self.path.open(encoding="utf-8") as stream:
+        with self._lock, self.path.open(encoding="utf-8") as stream:
             for line_number, line in enumerate(stream, start=1):
                 if not line.strip():
                     continue
@@ -33,4 +35,5 @@ class EventStorage:
     def replace(self, events: Iterable[AgentEvent]) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         content = "".join(event.model_dump_json() + "\n" for event in events)
-        self.path.write_text(content, encoding="utf-8")
+        with self._lock:
+            self.path.write_text(content, encoding="utf-8")

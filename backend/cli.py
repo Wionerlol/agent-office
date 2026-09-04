@@ -65,9 +65,9 @@ def run_wrapped(
     )
     emitter(
         AgentEvent(
-            type=AgentEventType.TOOL_STARTED,
+            type=AgentEventType.STATE_CHANGED,
             agent_id=identifier,
-            payload={"tool": provider, "command": list(command)},
+            payload={"from": "starting", "to": "thinking"},
         )
     )
     exit_code = process.wait()
@@ -79,13 +79,14 @@ def run_wrapped(
                 payload={"message": f"Process exited with status {exit_code}"},
             )
         )
-    emitter(
-        AgentEvent(
-            type=AgentEventType.TOOL_FINISHED,
-            agent_id=identifier,
-            payload={"tool": provider, "exit_code": exit_code, "next_state": "done"},
+    if not exit_code:
+        emitter(
+            AgentEvent(
+                type=AgentEventType.STATE_CHANGED,
+                agent_id=identifier,
+                payload={"to": "done"},
+            )
         )
-    )
     emitter(AgentEvent(type=AgentEventType.AGENT_STOPPED, agent_id=identifier))
     return exit_code
 

@@ -1,9 +1,11 @@
+import asyncio
 from typing import Any
 
 from backend.models import Agent, AgentEvent, AgentEventType, AgentState
 from backend.observer.tools import state_for_command
 from backend.runtime.bus import EventBus
 from backend.runtime.storage import EventStorage
+from backend.state.engine import AgentStateEngine, StateTransitionError
 from backend.state.registry import AgentRegistry
 
 
@@ -15,10 +17,12 @@ class OfficeRuntime:
         storage: EventStorage,
         registry: AgentRegistry | None = None,
         bus: EventBus | None = None,
+        state_engine: AgentStateEngine | None = None,
     ) -> None:
         self.storage = storage
         self.registry = registry or AgentRegistry()
         self.bus = bus or EventBus()
+        self.state_engine = state_engine or AgentStateEngine()
 
     async def apply(self, event: AgentEvent, *, record: bool = True) -> dict[str, Any]:
         if event.type is AgentEventType.AGENT_STARTED:
@@ -35,7 +39,7 @@ class OfficeRuntime:
             message = self._apply_update(event)
 
         if record:
-            self.storage.append(event)
+            await asyncio.to_thread(self.storage.append, event)
         await self.bus.publish(message)
         return message
 
@@ -44,7 +48,11 @@ class OfficeRuntime:
         changes: dict[str, Any] = {"last_active_at": event.timestamp}
 
         if event.type is AgentEventType.STATE_CHANGED:
-            changes["status"] = AgentState(event.payload["to"])
+            changes["status"] = self.state_engine.transition(
+                current.status,
+                event.payload["to"],
+                event.payload.get("from"),
+            )
         elif event.type is AgentEventType.FILE_CHANGED:
             path = str(event.payload["file"])
             changes["changed_files"] = list(dict.fromkeys([*current.changed_files, path]))
@@ -53,7 +61,10 @@ class OfficeRuntime:
         elif event.type is AgentEventType.TOOL_STARTED:
             changes["current_tool"] = event.payload.get("tool")
             command = event.payload.get("command") or event.payload.get("tool") or ""
-            changes["status"] = state_for_command(str(command))
+            if isinstance(command, list) and all(isinstance(part, str) for part in command):
+                changes["status"] = state_for_command(command)
+            else:
+                changes["status"] = state_for_command(str(command))
         elif event.type is AgentEventType.TOOL_FINISHED:
             changes["current_tool"] = None
             changes["status"] = AgentState(event.payload.get("next_state", AgentState.THINKING))
@@ -75,8 +86,9 @@ class OfficeRuntime:
         return {"type": "agent.updated", "agent_id": event.agent_id, "changes": serialized}
 
     async def restore(self) -> None:
-        for event in self.storage.read():
+        events = await asyncio.to_thread(self.storage.read)
+        for event in events:
             try:
                 await self.apply(event, record=False)
-            except KeyError:
+            except (KeyError, StateTransitionError):
                 continue

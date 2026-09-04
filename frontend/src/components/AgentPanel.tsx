@@ -18,7 +18,7 @@ export function AgentPanel({ agent, events, onClose }: AgentPanelProps) {
       <dl>
         <dt>Provider</dt><dd>{agent.provider}</dd>
         <dt>Role</dt><dd>{agent.role ?? String(agent.metadata.role ?? "—")}</dd>
-        <dt>Personality</dt><dd>{String(agent.metadata.personality ?? (agent.provider === "codex" ? "Focused" : "Steady"))}</dd>
+        <dt>Personality</dt><dd>{String(agent.metadata.personality ?? "Steady")}</dd>
         <dt>Task</dt><dd>{agent.task ?? "—"}</dd>
         <dt>PID</dt><dd>{agent.pid ?? "—"}</dd>
         <dt>Branch</dt><dd>{agent.branch ?? "—"}</dd>

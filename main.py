@@ -1,7 +1,7 @@
 from backend.main import run
 
 
-def main():
+def main() -> None:
     run()
 
 

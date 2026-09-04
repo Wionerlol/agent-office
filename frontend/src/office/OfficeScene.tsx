@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 
 import type { Agent } from "../models/agent";
 import { useAgentStore } from "../store/agents";
-import { deskFor, OFFICE_HEIGHT, OFFICE_WIDTH, POSITIONS, ZONES, type Point } from "./layout";
+import { assignDesk, OFFICE_HEIGHT, OFFICE_WIDTH, POSITIONS, ZONES, type Point } from "./layout";
 import { routeBetween } from "./navigation";
 import { visualFor, type VisualState } from "./visual";
 
@@ -88,6 +88,7 @@ export function OfficeScene({ agents }: OfficeSceneProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const appRef = useRef<Application | null>(null);
   const renderedRef = useRef(new Map<string, RenderedAgent>());
+  const assignmentsRef = useRef(new Map<string, string>());
   const [ready, setReady] = useState(false);
   const selectAgent = useAgentStore((state) => state.selectAgent);
 
@@ -96,6 +97,7 @@ export function OfficeScene({ agents }: OfficeSceneProps) {
     if (!host) return;
     const app = new Application();
     const renderedAgents = renderedRef.current;
+    const deskAssignments = assignmentsRef.current;
     let cancelled = false;
     void app.init({ width: OFFICE_WIDTH, height: OFFICE_HEIGHT, antialias: true, backgroundColor: 0x202d31, resolution: Math.min(window.devicePixelRatio, 2), autoDensity: true }).then(() => {
       if (cancelled) return app.destroy();
@@ -129,6 +131,7 @@ export function OfficeScene({ agents }: OfficeSceneProps) {
     return () => {
       cancelled = true;
       renderedAgents.clear();
+      deskAssignments.clear();
       appRef.current = null;
       if (app.renderer) app.destroy(true, { children: true });
     };
@@ -143,6 +146,7 @@ export function OfficeScene({ agents }: OfficeSceneProps) {
         app.stage.removeChild(rendered.container);
         rendered.container.destroy({ children: true });
         renderedRef.current.delete(agentId);
+        assignmentsRef.current.delete(agentId);
       }
     }
     for (const agent of agents) {
@@ -154,7 +158,7 @@ export function OfficeScene({ agents }: OfficeSceneProps) {
       }
       rendered.name.text = agent.name;
       rendered.status.text = agent.status;
-      const visual = visualFor(agent.status, deskFor(agent.id));
+      const visual = visualFor(agent.status, assignDesk(agent.id, assignmentsRef.current));
       rendered.animation = visual.animation;
       if (visual.zone !== rendered.targetZone) {
         rendered.targetZone = visual.zone;

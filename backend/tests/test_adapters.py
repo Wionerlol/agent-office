@@ -1,16 +1,17 @@
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 
 from backend.adapters.generic import GenericProcessAdapter
 from backend.models import AgentState
-from backend.observer.tools import state_for_command
+from backend.observer.tools import state_for_command, tool_kind
 
 
 @pytest.mark.asyncio
-async def test_generic_adapter_detects_an_explicitly_tagged_process(tmp_path):
+async def test_generic_adapter_detects_an_explicitly_tagged_process(tmp_path: Path) -> None:
     environment = {
         **os.environ,
         "AGENT_OFFICE_ID": "worker-one",
@@ -47,5 +48,20 @@ async def test_generic_adapter_detects_an_explicitly_tagged_process(tmp_path):
         ("git status", AgentState.TOOL_RUNNING),
     ],
 )
-def test_commands_are_classified_into_domain_states(command, state):
+def test_commands_are_classified_into_domain_states(command: str, state: AgentState) -> None:
     assert state_for_command(command) is state
+
+
+@pytest.mark.parametrize(
+    ("command", "kind"),
+    [
+        ("pytest -q", "test"),
+        ("rg AgentState", "search"),
+        ("git status", "git"),
+        ("npm run build", "build"),
+        ("ruff check .", "lint"),
+        ("bash -lc pwd", "shell"),
+    ],
+)
+def test_tool_commands_are_named_for_the_office(command: str, kind: str) -> None:
+    assert tool_kind(command) == kind

@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
@@ -7,7 +8,7 @@ from backend.config import Settings
 from backend.models import Agent, AgentEvent, AgentEventType
 
 
-def test_rest_and_websocket_expose_the_same_live_agents(tmp_path):
+def test_rest_and_websocket_expose_the_same_live_agents(tmp_path: Path) -> None:
     settings = Settings.for_project(tmp_path)
     app = create_app(settings)
     agent = Agent(
@@ -35,7 +36,7 @@ def test_rest_and_websocket_expose_the_same_live_agents(tmp_path):
             assert snapshot["agents"][0]["id"] == "frontend"
 
 
-def test_history_endpoint_filters_the_append_only_event_log(tmp_path):
+def test_history_endpoint_filters_the_append_only_event_log(tmp_path: Path) -> None:
     app = create_app(Settings.for_project(tmp_path))
     app.state.runtime.storage.append(
         AgentEvent(type=AgentEventType.TASK_UPDATED, agent_id="one", payload={"task": "A"})

@@ -9,6 +9,7 @@ from backend.config import ObserverSettings
 from backend.models import Agent, AgentEvent, AgentEventType, AgentState
 from backend.observer.filesystem import FileSystemObserver
 from backend.observer.git import GitObserver
+from backend.observer.tools import ToolObserver
 from backend.runtime.office import OfficeRuntime
 
 logger = logging.getLogger(__name__)
@@ -28,14 +29,25 @@ class ObserverManager:
         self.adapters = adapters or [GenericProcessAdapter(scan_interval=settings.scan_interval)]
         self._managed_ids: set[str] = set()
         self._filesystems: dict[str, FileSystemObserver] = {}
+        self._tool_observer = ToolObserver()
+        self._observation_tasks: dict[str, asyncio.Task[None]] = {}
         self._task: asyncio.Task[None] | None = None
         self._stopped = asyncio.Event()
+        self._initialized = False
 
     async def run_once(self) -> None:
+        if not self._initialized:
+            self._managed_ids = {
+                agent.id for agent in self.runtime.registry.all() if agent.pid is not None
+            }
+            self._initialized = True
         detected: dict[str, Agent] = {}
+        detected_by: dict[str, AgentAdapter] = {}
         for adapter in self.adapters:
             try:
-                detected.update({agent.id: agent for agent in await adapter.detect()})
+                for agent in await adapter.detect():
+                    detected[agent.id] = agent
+                    detected_by[agent.id] = adapter
             except Exception:
                 logger.exception(
                     "adapter detection failed",
@@ -52,6 +64,11 @@ class ObserverManager:
                     )
                 )
                 logger.info("agent started", extra={"agent_id": agent_id})
+            if agent_id not in self._observation_tasks:
+                self._observation_tasks[agent_id] = asyncio.create_task(
+                    self._consume_adapter(detected_by[agent_id], agent),
+                    name=f"observe-{agent_id}",
+                )
 
         for agent_id in self._managed_ids - detected.keys():
             try:
@@ -61,17 +78,24 @@ class ObserverManager:
                 logger.info("agent stopped", extra={"agent_id": agent_id})
             except KeyError:
                 pass
+            if filesystem := self._filesystems.pop(agent_id, None):
+                await asyncio.to_thread(filesystem.close)
+            self._tool_observer.forget(agent_id)
+            if task := self._observation_tasks.pop(agent_id, None):
+                task.cancel()
+                await asyncio.gather(task, return_exceptions=True)
 
         self._managed_ids = set(detected)
         for agent in detected.values():
             try:
                 await self._observe_repository(agent)
+                await self._observe_tools(agent)
                 await self._mark_idle(agent.id)
             except Exception:
                 logger.exception("observer failed", extra={"agent_id": agent.id})
 
     async def _observe_repository(self, agent: Agent) -> None:
-        git = GitObserver(agent.repository).snapshot()
+        git = await asyncio.to_thread(GitObserver(agent.repository).snapshot)
         current = self.runtime.registry.get(agent.id)
         facts: dict[str, object] = {}
         if current.branch != git.branch:
@@ -87,7 +111,8 @@ class ObserverManager:
         filesystem = self._filesystems.setdefault(
             agent.id, FileSystemObserver(agent.repository)
         )
-        for event in filesystem.scan(agent.id):
+        events = await asyncio.to_thread(filesystem.scan, agent.id)
+        for event in events:
             await self.runtime.apply(event)
             current = self.runtime.registry.get(agent.id)
             if current.status not in {AgentState.TESTING, AgentState.TOOL_RUNNING}:
@@ -98,6 +123,25 @@ class ObserverManager:
                         payload={"from": current.status, "to": AgentState.CODING},
                     )
                 )
+
+    async def _observe_tools(self, agent: Agent) -> None:
+        if agent.pid is None:
+            return
+        events = await asyncio.to_thread(self._tool_observer.scan, agent.id, agent.pid)
+        for event in events:
+            await self.runtime.apply(event)
+
+    async def _consume_adapter(self, adapter: AgentAdapter, agent: Agent) -> None:
+        try:
+            async for event in adapter.observe(agent):
+                try:
+                    await self.runtime.apply(event)
+                except KeyError:
+                    pass
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("adapter observation failed", extra={"agent_id": agent.id})
 
     async def _mark_idle(self, agent_id: str) -> None:
         agent = self.runtime.registry.get(agent_id)
@@ -131,3 +175,11 @@ class ObserverManager:
         self._stopped.set()
         if self._task:
             await self._task
+        await asyncio.gather(
+            *(asyncio.to_thread(observer.close) for observer in self._filesystems.values())
+        )
+        for task in self._observation_tasks.values():
+            task.cancel()
+        if self._observation_tasks:
+            await asyncio.gather(*self._observation_tasks.values(), return_exceptions=True)
+        self._observation_tasks.clear()

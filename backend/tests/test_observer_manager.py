@@ -1,6 +1,7 @@
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -12,7 +13,7 @@ from backend.runtime.storage import EventStorage
 
 
 @pytest.mark.asyncio
-async def test_manager_tracks_detected_process_until_it_exits(tmp_path):
+async def test_manager_tracks_detected_process_until_it_exits(tmp_path: Path) -> None:
     environment = {
         **os.environ,
         "AGENT_OFFICE_ID": "managed-worker",

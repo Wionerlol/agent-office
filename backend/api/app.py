@@ -1,6 +1,8 @@
 import asyncio
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Any
 
 from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,10 +10,12 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend.config import Settings
-from backend.models import AgentEvent, ProjectInfo
+from backend.models import Agent, AgentEvent, ProjectInfo
+from backend.observer.git import GitObserver
 from backend.observer.manager import ObserverManager
 from backend.runtime.office import OfficeRuntime
 from backend.runtime.storage import EventStorage
+from backend.state.engine import StateTransitionError
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -20,7 +24,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     observer = ObserverManager(runtime, settings.observer)
 
     @asynccontextmanager
-    async def lifespan(_: FastAPI):
+    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         await runtime.restore()
         if settings.observer.enabled:
             observer.start()
@@ -33,7 +37,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.observer = observer
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[f"http://localhost:{settings.frontend.port}", f"http://127.0.0.1:{settings.frontend.port}"],
+        allow_origins=[
+            f"http://localhost:{settings.frontend.port}",
+            f"http://127.0.0.1:{settings.frontend.port}",
+        ],
         allow_methods=["*"],
         allow_headers=["*"],
     )
@@ -43,11 +50,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return {"status": "ok"}
 
     @app.get("/api/agents")
-    async def agents():
+    async def agents() -> list[Agent]:
         return runtime.registry.all()
 
     @app.get("/api/agents/{agent_id}")
-    async def agent(agent_id: str):
+    async def agent(agent_id: str) -> Agent:
         try:
             return runtime.registry.get(agent_id)
         except KeyError as error:
@@ -55,35 +62,35 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/api/project")
     async def project() -> ProjectInfo:
-        branch = None
-        head = settings.project.path / ".git" / "HEAD"
-        if head.exists():
-            content = head.read_text(encoding="utf-8").strip()
-            branch = content.rsplit("/", 1)[-1] if content.startswith("ref:") else content[:12]
+        snapshot = await asyncio.to_thread(GitObserver(settings.project.path).snapshot)
         return ProjectInfo(
             name=settings.project.name,
             path=str(settings.project.path),
-            branch=branch,
+            branch=snapshot.branch,
         )
 
     @app.get("/api/projects")
-    async def projects() -> list[dict[str, str]]:
+    async def projects() -> list[ProjectInfo]:
         configured = settings.projects or [settings.project]
-        return [{"name": item.name, "path": str(item.path)} for item in configured]
+        return [ProjectInfo(name=item.name, path=str(item.path)) for item in configured]
 
     @app.post("/api/events")
-    async def receive_event(event: AgentEvent):
+    async def receive_event(event: AgentEvent) -> dict[str, Any]:
         try:
             return await runtime.apply(event)
         except KeyError as error:
             raise HTTPException(status_code=404, detail=str(error)) from error
+        except StateTransitionError as error:
+            raise HTTPException(status_code=409, detail=str(error)) from error
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
 
     @app.get("/api/history")
     async def history(
         agent_id: str | None = None,
         limit: int = Query(default=1000, ge=1, le=10_000),
     ) -> list[AgentEvent]:
-        events = runtime.storage.read()
+        events = await asyncio.to_thread(runtime.storage.read)
         if agent_id:
             events = [event for event in events if event.agent_id == agent_id]
         return events[-limit:]

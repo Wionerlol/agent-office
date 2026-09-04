@@ -9,7 +9,7 @@ from backend.adapters.base import AgentAdapter
 from backend.models import Agent, AgentEvent, AgentEventType, AgentState
 from backend.observer.process import ProcessObserver, ProcessSnapshot
 
-KNOWN_PROVIDERS = {"codex", "claude", "opencode"}
+KNOWN_PROVIDERS = frozenset({"codex", "claude", "opencode"})
 
 
 class GenericProcessAdapter(AgentAdapter):
@@ -27,7 +27,7 @@ class GenericProcessAdapter(AgentAdapter):
 
     async def detect(self) -> list[Agent]:
         agents: list[Agent] = []
-        for process in self.processes.snapshots():
+        for process in await asyncio.to_thread(self.processes.snapshots):
             if agent := self._to_agent(process):
                 agents.append(agent)
         return agents
@@ -35,20 +35,29 @@ class GenericProcessAdapter(AgentAdapter):
     async def observe(self, agent: Agent) -> AsyncIterator[AgentEvent]:
         if agent.pid is None:
             return
-        try:
-            await asyncio.to_thread(psutil.Process(agent.pid).wait)
-        except psutil.NoSuchProcess:
-            pass
+        never = asyncio.Event()
+        while await asyncio.to_thread(psutil.pid_exists, agent.pid):
+            try:
+                await asyncio.wait_for(never.wait(), timeout=self.scan_interval)
+            except TimeoutError:
+                continue
         yield AgentEvent(type=AgentEventType.AGENT_STOPPED, agent_id=agent.id)
 
     def _to_agent(self, process: ProcessSnapshot) -> Agent | None:
         environment = process.environment
         executable = Path(process.command[0]).name.lower()
-        provider = environment.get("AGENT_OFFICE_PROVIDER") or self.provider or executable
+        command_names = {Path(part).name.lower() for part in process.command}
+        matched = next((name for name in self.command_names if name in command_names), None)
+        provider = (
+            environment.get("AGENT_OFFICE_PROVIDER")
+            or self.provider
+            or matched
+            or executable
+        )
         explicit = environment.get("AGENT_OFFICE_ID")
-        if not explicit and executable not in self.command_names:
+        if not explicit and matched is None:
             return None
-        if self.provider and provider != self.provider and executable not in self.command_names:
+        if self.provider and provider != self.provider and matched is None:
             return None
         repository = environment.get("AGENT_OFFICE_REPOSITORY", process.cwd)
         created = datetime.fromtimestamp(process.created_at, tz=UTC)
