@@ -98,18 +98,24 @@ const FURNITURE: Obstacle[] = [
   { x: 854, y: 404, width: 182, height: 42 },
   { x: 42, y: 283, width: 88, height: 63 },
 ];
+const OBSTACLES = [...WALLS, ...FURNITURE];
+
+export function isOfficePositionWalkable(point: Point): boolean {
+  if (point.x < 24 || point.x > 1076 || point.y < 24 || point.y > 656) return false;
+  return !OBSTACLES.some((obstacle) =>
+    point.x >= obstacle.x - AGENT_PADDING
+    && point.x <= obstacle.x + obstacle.width + AGENT_PADDING
+    && point.y >= obstacle.y - AGENT_PADDING
+    && point.y <= obstacle.y + obstacle.height + AGENT_PADDING
+  );
+}
 
 function officeBlocked(start: GridPoint, goal: GridPoint): Set<string> {
   const blocked = new Set<string>();
   for (let y = 0; y < GRID_HEIGHT; y += 1) {
     for (let x = 0; x < GRID_WIDTH; x += 1) {
       const point = { x: (x + 0.5) * CELL_SIZE, y: (y + 0.5) * CELL_SIZE };
-      if ([...WALLS, ...FURNITURE].some((obstacle) =>
-        point.x >= obstacle.x - AGENT_PADDING
-        && point.x <= obstacle.x + obstacle.width + AGENT_PADDING
-        && point.y >= obstacle.y - AGENT_PADDING
-        && point.y <= obstacle.y + obstacle.height + AGENT_PADDING
-      )) blocked.add(key({ x, y }));
+      if (!isOfficePositionWalkable(point)) blocked.add(key({ x, y }));
     }
   }
   blocked.delete(key(start));

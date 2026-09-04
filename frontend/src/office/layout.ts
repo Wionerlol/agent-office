@@ -18,6 +18,11 @@ export interface AgentTarget {
   zone: string;
 }
 
+export interface AgentPlacement extends Point {
+  scale: number;
+  showLabel: boolean;
+}
+
 export const OFFICE_WIDTH = 1100;
 export const OFFICE_HEIGHT = 680;
 
@@ -33,7 +38,7 @@ export const ZONES: ZoneLayout[] = [
 ];
 
 export const POSITIONS: Record<string, Point> = {
-  entrance: { x: 85, y: 340 },
+  entrance: { x: 85, y: 370 },
   "desk-1": { x: 250, y: 160 },
   "desk-2": { x: 400, y: 160 },
   "desk-3": { x: 550, y: 160 },
@@ -50,32 +55,100 @@ export const POSITIONS: Record<string, Point> = {
   exit: { x: 992, y: 588 },
 };
 
-const SPREAD_BY_ZONE: Record<string, { columns: number; gapX: number; gapY: number }> = {
-  entrance: { columns: 2, gapX: 100, gapY: 110 },
-  library: { columns: 3, gapX: 100, gapY: 110 },
-  coffee_area: { columns: 3, gapX: 100, gapY: 110 },
-  lounge: { columns: 3, gapX: 100, gapY: 110 },
-  tool_lab: { columns: 3, gapX: 100, gapY: 110 },
-  test_lab: { columns: 3, gapX: 100, gapY: 110 },
-  exit: { columns: 2, gapX: 100, gapY: 110 },
+interface PlacementArea {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+interface GridLayout {
+  columns: number;
+  rows: number;
+  scale: number;
+  gapX: number;
+  gapY: number;
+  itemWidth: number;
+  itemHeight: number;
+}
+
+const ZONE_PLACEMENT_AREAS: Record<string, PlacementArea> = {
+  entrance: { x: 36, y: 355, width: 102, height: 27 },
+  library: { x: 824, y: 120, width: 238, height: 84 },
+  coffee_area: { x: 184, y: 535, width: 166, height: 99 },
+  lounge: { x: 390, y: 544, width: 176, height: 37 },
+  tool_lab: { x: 606, y: 560, width: 198, height: 74 },
+  test_lab: { x: 844, y: 344, width: 218, height: 52 },
+  exit: { x: 920, y: 544, width: 142, height: 90 },
 };
 
-function spreadAround(anchor: Point, count: number, zone: string): Point[] {
-  const config = SPREAD_BY_ZONE[zone] ?? { columns: 2, gapX: 100, gapY: 110 };
-  const columns = Math.min(config.columns, count);
-  const rows = Math.ceil(count / columns);
+function placementArea(zone: string, anchor: Point): PlacementArea {
+  const room = ZONES.find((candidate) => candidate.id === zone);
+  if (!room) return { x: anchor.x - 62, y: anchor.y - 58, width: 124, height: 116 };
+  if (ZONE_PLACEMENT_AREAS[zone]) return ZONE_PLACEMENT_AREAS[zone];
+  return {
+    x: room.x + 8,
+    y: room.y + 32,
+    width: room.width - 16,
+    height: room.height - 40,
+  };
+}
+
+function bestGrid(count: number, area: PlacementArea, showLabel: boolean): GridLayout {
+  const itemWidth = showLabel ? 96 : 46;
+  const itemHeight = showLabel ? 108 : 69;
+  const baseGapX = showLabel ? 100 : 50;
+  const baseGapY = showLabel ? 110 : 72;
+  let best: GridLayout | undefined;
+  for (let columns = 1; columns <= count; columns += 1) {
+    const rows = Math.ceil(count / columns);
+    const unscaledWidth = (Math.min(columns, count) - 1) * baseGapX + itemWidth;
+    const unscaledHeight = (rows - 1) * baseGapY + itemHeight;
+    const scale = Math.min(1, area.width / unscaledWidth, area.height / unscaledHeight);
+    if (!best || scale > best.scale) {
+      best = {
+        columns,
+        rows,
+        scale,
+        gapX: baseGapX * scale,
+        gapY: baseGapY * scale,
+        itemWidth: itemWidth * scale,
+        itemHeight: itemHeight * scale,
+      };
+    }
+  }
+  return best!;
+}
+
+function spreadAround(anchor: Point, count: number, zone: string): AgentPlacement[] {
+  const area = placementArea(zone, anchor);
+  const labeled = bestGrid(count, area, true);
+  const showLabel = count <= 3 && labeled.scale >= 0.7;
+  const grid = showLabel ? labeled : bestGrid(count, area, false);
+  const occupiedWidth = (Math.min(grid.columns, count) - 1) * grid.gapX + grid.itemWidth;
+  const occupiedHeight = (grid.rows - 1) * grid.gapY + grid.itemHeight;
+  const centerX = Math.max(
+    area.x + occupiedWidth / 2,
+    Math.min(anchor.x, area.x + area.width - occupiedWidth / 2),
+  );
+  const centerY = Math.max(
+    area.y + occupiedHeight / 2,
+    Math.min(anchor.y, area.y + area.height - occupiedHeight / 2),
+  );
   return Array.from({ length: count }, (_, index) => {
-    const row = Math.floor(index / columns);
-    const itemsInRow = Math.min(columns, count - row * columns);
-    const column = index % columns;
+    const row = Math.floor(index / grid.columns);
+    const itemsInRow = Math.min(grid.columns, count - row * grid.columns);
+    const column = index % grid.columns;
     return {
-      x: anchor.x + (column - (itemsInRow - 1) / 2) * config.gapX,
-      y: anchor.y + (row - (rows - 1) / 2) * config.gapY,
+      x: centerX + (column - (itemsInRow - 1) / 2) * grid.gapX,
+      y: centerY + (row - (grid.rows - 1) / 2) * grid.gapY,
+      scale: grid.scale,
+      showLabel,
     };
   });
 }
 
-export function spreadAgentTargets(targets: readonly AgentTarget[]): Map<string, Point> {
+export function spreadAgentTargets(targets: readonly AgentTarget[]): Map<string, AgentPlacement> {
   const byZone = new Map<string, string[]>();
   for (const target of targets) {
     const occupants = byZone.get(target.zone) ?? [];
@@ -83,7 +156,7 @@ export function spreadAgentTargets(targets: readonly AgentTarget[]): Map<string,
     byZone.set(target.zone, occupants);
   }
 
-  const positions = new Map<string, Point>();
+  const positions = new Map<string, AgentPlacement>();
   for (const [zone, occupantIds] of byZone) {
     const anchor = POSITIONS[zone] ?? POSITIONS.entrance;
     const sortedIds = [...occupantIds].sort((left, right) => left.localeCompare(right));
@@ -94,16 +167,17 @@ export function spreadAgentTargets(targets: readonly AgentTarget[]): Map<string,
 }
 
 export function separateAgentPositions(
-  agents: readonly (Point & { id: string })[],
+  agents: readonly (Point & { id: string; radius?: number })[],
   minimumDistance = 50,
 ): Map<string, Point> {
+  const radii = new Map(agents.map(({ id, radius }) => [id, radius ?? minimumDistance / 2]));
   const positions = new Map(
     [...agents]
       .sort((left, right) => left.id.localeCompare(right.id))
       .map(({ id, x, y }) => [id, { x, y }]),
   );
   const ids = [...positions.keys()];
-  const maximumPasses = Math.max(12, ids.length * 8);
+  const maximumPasses = Math.max(16, ids.length * 4);
   for (let pass = 0; pass < maximumPasses; pass += 1) {
     let foundOverlap = false;
     for (let left = 0; left < ids.length; left += 1) {
@@ -113,18 +187,28 @@ export function separateAgentPositions(
         let deltaX = second.x - first.x;
         let deltaY = second.y - first.y;
         let distance = Math.hypot(deltaX, deltaY);
-        if (distance >= minimumDistance) continue;
+        const requiredDistance = radii.get(ids[left])! + radii.get(ids[right])!;
+        if (distance >= requiredDistance) continue;
         foundOverlap = true;
         if (distance === 0) {
-          deltaX = 1;
-          deltaY = 0;
+          const angle = ((left * ids.length + right) * 2.399963) % (Math.PI * 2);
+          deltaX = Math.cos(angle);
+          deltaY = Math.sin(angle);
           distance = 1;
         }
-        const correction = (minimumDistance - distance) / 2;
+        const correction = (requiredDistance - distance) / 2;
         const offsetX = (deltaX / distance) * correction;
         const offsetY = (deltaY / distance) * correction;
-        positions.set(ids[left], { x: first.x - offsetX, y: first.y - offsetY });
-        positions.set(ids[right], { x: second.x + offsetX, y: second.y + offsetY });
+        const firstRadius = radii.get(ids[left])!;
+        const secondRadius = radii.get(ids[right])!;
+        positions.set(ids[left], {
+          x: Math.max(24 + firstRadius, Math.min(1076 - firstRadius, first.x - offsetX)),
+          y: Math.max(48 + firstRadius, Math.min(650 - firstRadius, first.y - offsetY)),
+        });
+        positions.set(ids[right], {
+          x: Math.max(24 + secondRadius, Math.min(1076 - secondRadius, second.x + offsetX)),
+          y: Math.max(48 + secondRadius, Math.min(650 - secondRadius, second.y + offsetY)),
+        });
       }
     }
     if (!foundOverlap) break;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { assignDesk, separateAgentPositions, spreadAgentTargets } from "./layout";
+import { assignDesk, separateAgentPositions, spreadAgentTargets, ZONES } from "./layout";
 
 describe("assignDesk", () => {
   it("uses each available desk before sharing one", () => {
@@ -34,9 +34,34 @@ describe("spreadAgentTargets", () => {
     const values = [...positions.values()];
     for (let left = 0; left < values.length; left += 1) {
       for (let right = left + 1; right < values.length; right += 1) {
-        const deltaX = Math.abs(values[left].x - values[right].x);
-        const deltaY = Math.abs(values[left].y - values[right].y);
-        expect(deltaX >= 100 || deltaY >= 110).toBe(true);
+        const first = values[left];
+        const second = values[right];
+        const firstWidth = (first.showLabel ? 96 : 46) * first.scale;
+        const secondWidth = (second.showLabel ? 96 : 46) * second.scale;
+        const firstHeight = (first.showLabel ? 108 : 69) * first.scale;
+        const secondHeight = (second.showLabel ? 108 : 69) * second.scale;
+        const deltaX = Math.abs(first.x - second.x);
+        const deltaY = Math.abs(first.y - second.y);
+        expect(
+          deltaX >= (firstWidth + secondWidth) / 2
+          || deltaY >= (firstHeight + secondHeight) / 2,
+        ).toBe(true);
+      }
+    }
+  });
+
+  it("keeps crowded shared zones inside their rooms by scaling the figures", () => {
+    for (const zone of ["entrance", "library", "coffee_area", "lounge", "tool_lab", "test_lab", "exit"]) {
+      const room = ZONES.find(({ id }) => id === zone)!;
+      const positions = spreadAgentTargets(
+        Array.from({ length: 8 }, (_, index) => ({ id: `agent-${index}`, zone })),
+      );
+
+      for (const position of positions.values()) {
+        expect(position.x - 23 * position.scale).toBeGreaterThanOrEqual(room.x);
+        expect(position.x + 23 * position.scale).toBeLessThanOrEqual(room.x + room.width);
+        expect(position.y - 46 * position.scale).toBeGreaterThanOrEqual(room.y);
+        expect(position.y + 23 * position.scale).toBeLessThanOrEqual(room.y + room.height);
       }
     }
   });
@@ -45,11 +70,18 @@ describe("spreadAgentTargets", () => {
     const positions = separateAgentPositions(
       Array.from({ length: 8 }, (_, index) => ({
         id: `agent-${index}`,
-        x: 500,
-        y: 300,
+        x: 85,
+        y: 370,
       })),
     );
     const values = [...positions.values()];
+
+    for (const position of values) {
+      expect(position.x).toBeGreaterThanOrEqual(49);
+      expect(position.x).toBeLessThanOrEqual(1051);
+      expect(position.y).toBeGreaterThanOrEqual(73);
+      expect(position.y).toBeLessThanOrEqual(625);
+    }
 
     for (let left = 0; left < values.length; left += 1) {
       for (let right = left + 1; right < values.length; right += 1) {

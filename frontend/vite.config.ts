@@ -3,6 +3,18 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   plugins: [react()],
+  build: {
+    chunkSizeWarningLimit: 550,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          pixi: ["pixi.js"],
+          react: ["react", "react-dom"],
+          state: ["zustand"],
+        },
+      },
+    },
+  },
   server: {
     port: 5173,
     proxy: {

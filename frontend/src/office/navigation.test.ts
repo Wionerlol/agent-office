@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { POSITIONS, spreadAgentTargets } from "./layout";
-import { findPath, routeBetween } from "./navigation";
+import { findPath, isOfficePositionWalkable, routeBetween } from "./navigation";
 
 describe("findPath", () => {
   it("routes around blocked office cells", () => {
@@ -38,9 +38,10 @@ describe("office routing", () => {
   it("can reach shared-area slots without using a direct obstacle fallback", () => {
     for (const zone of ["library", "coffee_area", "lounge", "tool_lab", "test_lab", "exit"]) {
       const slots = spreadAgentTargets(
-        ["alpha", "bravo", "charlie"].map((id) => ({ id, zone })),
+        Array.from({ length: 8 }, (_, index) => ({ id: `agent-${index}`, zone })),
       );
       for (const destination of slots.values()) {
+        expect(isOfficePositionWalkable(destination), `${zone}: ${destination.x},${destination.y}`).toBe(true);
         expect(routeBetween(POSITIONS["desk-1"], destination).length).toBeGreaterThan(0);
       }
     }

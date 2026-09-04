@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Agent } from "../models/agent";
 import { useAgentStore } from "../store/agents";
 import { assignDesk, OFFICE_HEIGHT, OFFICE_WIDTH, POSITIONS, separateAgentPositions, spreadAgentTargets, type Point } from "./layout";
-import { routeBetween } from "./navigation";
+import { isOfficePositionWalkable, routeBetween } from "./navigation";
 import { drawOfficeScenery } from "./scenery";
 import { visualFor, type VisualState } from "./visual";
 
@@ -22,6 +22,7 @@ interface RenderedAgent {
   path: Point[];
   targetZone: string;
   targetPoint: Point;
+  showLabel: boolean;
   animation: VisualState;
   phase: number;
 }
@@ -93,6 +94,7 @@ function createRenderedAgent(agent: Agent, selectAgent: (id: string) => void): R
     path: [],
     targetZone: "entrance",
     targetPoint: POSITIONS.entrance,
+    showLabel: true,
     animation: "entering",
     phase: Math.random() * Math.PI * 2,
   };
@@ -139,7 +141,7 @@ export function OfficeScene({ agents, deskCount }: OfficeSceneProps) {
           rendered.body.y = active ? Math.sin(time * 2) * 1.5 : 0;
           rendered.body.rotation = rendered.animation === "celebration" ? Math.sin(time * 2) * 0.12 : 0;
           rendered.body.alpha = rendered.animation === "error" ? 0.65 + Math.sin(time * 3) * 0.3 : 1;
-          rendered.labels.visible = rendered.path.length === 0;
+          rendered.labels.visible = rendered.showLabel && rendered.path.length === 0;
           rendered.container.zIndex = 100 + Math.round(rendered.container.y);
         }
         const separated = separateAgentPositions(
@@ -147,11 +149,19 @@ export function OfficeScene({ agents, deskCount }: OfficeSceneProps) {
             id,
             x: rendered.container.x,
             y: rendered.container.y,
+            radius: 25 * rendered.container.scale.x,
           })),
         );
         for (const [id, point] of separated) {
           const rendered = renderedAgents.get(id);
-          if (rendered) rendered.container.position.set(point.x, point.y);
+          if (!rendered) continue;
+          const current = { x: rendered.container.x, y: rendered.container.y };
+          const constrained = [
+            point,
+            { x: point.x, y: current.y },
+            { x: current.x, y: point.y },
+          ].find(isOfficePositionWalkable) ?? current;
+          rendered.container.position.set(constrained.x, constrained.y);
         }
       });
       setReady(true);
@@ -196,7 +206,17 @@ export function OfficeScene({ agents, deskCount }: OfficeSceneProps) {
       rendered.name.text = shortName(agent.name);
       rendered.status.text = agent.status.toUpperCase();
       rendered.animation = visual.animation;
-      const target = targetPositions.get(agent.id) ?? POSITIONS.entrance;
+      const placement = targetPositions.get(agent.id) ?? {
+        ...POSITIONS.entrance,
+        scale: 1,
+        showLabel: true,
+      };
+      rendered.container.scale.set(placement.scale);
+      rendered.showLabel = placement.showLabel;
+      const target = { x: placement.x, y: placement.y };
+      if (visual.zone === "entrance" && rendered.targetZone === "entrance") {
+        rendered.container.position.set(target.x, target.y);
+      }
       if (
         visual.zone !== rendered.targetZone
         || target.x !== rendered.targetPoint.x
