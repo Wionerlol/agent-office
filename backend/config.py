@@ -13,6 +13,7 @@ class ObserverSettings(BaseModel):
     enabled: bool = True
     idle_timeout: float = 30.0
     scan_interval: float = 1.0
+    tool_scan_interval: float = Field(default=0.1, gt=0)
 
 
 class ServerSettings(BaseModel):

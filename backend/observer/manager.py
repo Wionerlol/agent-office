@@ -31,6 +31,7 @@ class ObserverManager:
         self._filesystems: dict[str, FileSystemObserver] = {}
         self._tool_observer = ToolObserver()
         self._observation_tasks: dict[str, asyncio.Task[None]] = {}
+        self._tool_tasks: dict[str, asyncio.Task[None]] = {}
         self._task: asyncio.Task[None] | None = None
         self._stopped = asyncio.Event()
         self._initialized = False
@@ -69,6 +70,11 @@ class ObserverManager:
                     self._consume_adapter(detected_by[agent_id], agent),
                     name=f"observe-{agent_id}",
                 )
+            if agent_id not in self._tool_tasks and agent.pid is not None:
+                self._tool_tasks[agent_id] = asyncio.create_task(
+                    self._observe_tools(agent),
+                    name=f"observe-tools-{agent_id}",
+                )
 
         for agent_id in self._managed_ids - detected.keys():
             try:
@@ -84,12 +90,14 @@ class ObserverManager:
             if task := self._observation_tasks.pop(agent_id, None):
                 task.cancel()
                 await asyncio.gather(task, return_exceptions=True)
+            if task := self._tool_tasks.pop(agent_id, None):
+                task.cancel()
+                await asyncio.gather(task, return_exceptions=True)
 
         self._managed_ids = set(detected)
         for agent in detected.values():
             try:
                 await self._observe_repository(agent)
-                await self._observe_tools(agent)
                 await self._mark_idle(agent.id)
             except Exception:
                 logger.exception("observer failed", extra={"agent_id": agent.id})
@@ -127,9 +135,23 @@ class ObserverManager:
     async def _observe_tools(self, agent: Agent) -> None:
         if agent.pid is None:
             return
-        events = await asyncio.to_thread(self._tool_observer.scan, agent.id, agent.pid)
-        for event in events:
-            await self.runtime.apply(event)
+        interval = min(self.settings.tool_scan_interval, self.settings.scan_interval)
+        while not self._stopped.is_set():
+            try:
+                events = await asyncio.to_thread(
+                    self._tool_observer.scan, agent.id, agent.pid
+                )
+                for event in events:
+                    try:
+                        await self.runtime.apply(event)
+                    except KeyError:
+                        return
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                logger.exception("tool observation failed", extra={"agent_id": agent.id})
+            with suppress(TimeoutError):
+                await asyncio.wait_for(self._stopped.wait(), timeout=interval)
 
     async def _consume_adapter(self, adapter: AgentAdapter, agent: Agent) -> None:
         try:
@@ -180,6 +202,11 @@ class ObserverManager:
         )
         for task in self._observation_tasks.values():
             task.cancel()
+        for task in self._tool_tasks.values():
+            task.cancel()
         if self._observation_tasks:
             await asyncio.gather(*self._observation_tasks.values(), return_exceptions=True)
+        if self._tool_tasks:
+            await asyncio.gather(*self._tool_tasks.values(), return_exceptions=True)
         self._observation_tasks.clear()
+        self._tool_tasks.clear()

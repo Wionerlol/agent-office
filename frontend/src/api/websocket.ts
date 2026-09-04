@@ -20,7 +20,10 @@ export function applyServerMessage(message: ServerMessage): void {
   }
   if (message.type === "agent.stopped") {
     store.setAgentStatus(message.agent_id, "offline");
-    window.setTimeout(() => useAgentStore.getState().removeAgent(message.agent_id), 1800);
+    window.setTimeout(() => {
+      const current = useAgentStore.getState().agents[message.agent_id];
+      if (current?.status === "offline") useAgentStore.getState().removeAgent(message.agent_id);
+    }, 5000);
     return;
   }
   store.updateAgent(message.agent_id, message.changes);
@@ -82,13 +85,18 @@ export function connectOfficeWebSocket(url?: string): () => void {
 }
 
 export async function loadProject(): Promise<void> {
-  const [projectResponse, projectsResponse] = await Promise.all([
+  const [projectResponse, projectsResponse, configResponse] = await Promise.all([
     fetch("/api/project"),
     fetch("/api/projects"),
+    fetch("/api/config"),
   ]);
   if (!projectResponse.ok) throw new Error(`Project request failed: ${projectResponse.status}`);
   useAgentStore.getState().setProject(await projectResponse.json());
   if (projectsResponse.ok) useAgentStore.getState().setProjects(await projectsResponse.json());
+  if (configResponse.ok) {
+    const config = await configResponse.json() as { desks?: unknown };
+    if (typeof config.desks === "number") useAgentStore.getState().setDeskCount(config.desks);
+  }
 }
 
 export async function sendAgentEvent(

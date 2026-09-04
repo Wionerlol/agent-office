@@ -29,11 +29,14 @@ export const ZONES: ZoneLayout[] = [
 
 export const POSITIONS: Record<string, Point> = {
   entrance: { x: 85, y: 340 },
-  "desk-1": { x: 275, y: 160 },
-  "desk-2": { x: 475, y: 160 },
-  "desk-3": { x: 675, y: 160 },
-  "desk-4": { x: 355, y: 330 },
-  "desk-5": { x: 595, y: 330 },
+  "desk-1": { x: 250, y: 160 },
+  "desk-2": { x: 400, y: 160 },
+  "desk-3": { x: 550, y: 160 },
+  "desk-4": { x: 700, y: 160 },
+  "desk-5": { x: 250, y: 330 },
+  "desk-6": { x: 400, y: 330 },
+  "desk-7": { x: 550, y: 330 },
+  "desk-8": { x: 700, y: 330 },
   library: { x: 942, y: 142 },
   coffee_area: { x: 265, y: 558 },
   lounge: { x: 477, y: 558 },
@@ -45,11 +48,11 @@ export const POSITIONS: Record<string, Point> = {
 export function assignDesk(
   agentId: string,
   assignments: Map<string, string>,
-  deskCount = 5,
+  deskCount = 8,
 ): string {
   const existing = assignments.get(agentId);
-  if (existing) return existing;
   const desks = Array.from({ length: deskCount }, (_, index) => `desk-${index + 1}`);
+  if (existing && desks.includes(existing)) return existing;
   const occupancy = new Map(desks.map((desk) => [desk, 0]));
   for (const desk of assignments.values()) {
     occupancy.set(desk, (occupancy.get(desk) ?? 0) + 1);

@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from backend.config import Settings
+from backend.config import OfficeSettings, Settings
 from backend.models import Agent, AgentEvent, ProjectInfo
 from backend.observer.git import GitObserver
 from backend.observer.manager import ObserverManager
@@ -73,6 +73,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def projects() -> list[ProjectInfo]:
         configured = settings.projects or [settings.project]
         return [ProjectInfo(name=item.name, path=str(item.path)) for item in configured]
+
+    @app.get("/api/config")
+    async def public_config() -> OfficeSettings:
+        return settings.office
 
     @app.post("/api/events")
     async def receive_event(event: AgentEvent) -> dict[str, Any]:

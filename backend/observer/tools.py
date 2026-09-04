@@ -1,3 +1,4 @@
+import re
 import shlex
 
 import psutil
@@ -16,7 +17,6 @@ TEST_MARKERS = frozenset(
         "mvn test",
     }
 )
-SEARCH_COMMANDS = frozenset({"rg", "grep", "find", "fd", "locate"})
 BUILD_MARKERS = (
     "npm run build",
     "pnpm build",
@@ -34,20 +34,20 @@ def tool_kind(command: str | list[str]) -> str:
     normalized = " ".join(text.lower().split())
     if any(marker in normalized for marker in TEST_MARKERS):
         return "test"
-    try:
-        executable = shlex.split(normalized)[0].rsplit("/", 1)[-1]
-    except (ValueError, IndexError):
-        return "tool"
-    if executable in SEARCH_COMMANDS:
+    if re.search(r"(?:^|[\s'\";&|])(?:rg|grep|find|fd|locate)(?=[\s'\";&|]|$)", normalized):
         return "search"
-    if executable == "git":
+    if re.search(r"(?:^|[\s'\";&|])git(?=[\s'\";&|]|$)", normalized):
         return "git"
-    if executable in SHELL_COMMANDS:
-        return "shell"
     if any(marker in normalized for marker in BUILD_MARKERS):
         return "build"
     if any(marker in normalized for marker in LINT_MARKERS):
         return "lint"
+    try:
+        executable = shlex.split(normalized)[0].rsplit("/", 1)[-1]
+    except (ValueError, IndexError):
+        return "tool"
+    if executable in SHELL_COMMANDS:
+        return "shell"
     return executable
 
 

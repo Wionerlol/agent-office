@@ -21,7 +21,11 @@ describe("WebSocket messages", () => {
 
     applyServerMessage({ type: "agent.stopped", agent_id: "worker" });
     expect(useAgentStore.getState().agents.worker.status).toBe("offline");
-    vi.advanceTimersByTime(1800);
-    expect(useAgentStore.getState().agents.worker).toBeUndefined();
+    applyServerMessage({
+      type: "agent.started",
+      agent: { ...useAgentStore.getState().agents.worker, status: "thinking" },
+    });
+    vi.advanceTimersByTime(5000);
+    expect(useAgentStore.getState().agents.worker.status).toBe("thinking");
   });
 });

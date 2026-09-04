@@ -9,6 +9,7 @@ import { visualFor, type VisualState } from "./visual";
 
 interface OfficeSceneProps {
   agents: Agent[];
+  deskCount: number;
 }
 
 interface RenderedAgent {
@@ -84,7 +85,7 @@ function createRenderedAgent(agent: Agent, selectAgent: (id: string) => void): R
   return { container, body, name, status, path: [], targetZone: "entrance", animation: "entering", phase: Math.random() * Math.PI * 2 };
 }
 
-export function OfficeScene({ agents }: OfficeSceneProps) {
+export function OfficeScene({ agents, deskCount }: OfficeSceneProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const appRef = useRef<Application | null>(null);
   const renderedRef = useRef(new Map<string, RenderedAgent>());
@@ -158,7 +159,11 @@ export function OfficeScene({ agents }: OfficeSceneProps) {
       }
       rendered.name.text = agent.name;
       rendered.status.text = agent.status;
-      const visual = visualFor(agent.status, assignDesk(agent.id, assignmentsRef.current));
+      const availableDesks = Math.max(1, Math.min(deskCount, 8));
+      const visual = visualFor(
+        agent.status,
+        assignDesk(agent.id, assignmentsRef.current, availableDesks),
+      );
       rendered.animation = visual.animation;
       if (visual.zone !== rendered.targetZone) {
         rendered.targetZone = visual.zone;
@@ -168,7 +173,7 @@ export function OfficeScene({ agents }: OfficeSceneProps) {
         );
       }
     }
-  }, [agents, ready, selectAgent]);
+  }, [agents, deskCount, ready, selectAgent]);
 
   return <div className="office-scene" ref={hostRef} aria-label="Live agent office map" />;
 }

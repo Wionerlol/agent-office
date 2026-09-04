@@ -10,6 +10,7 @@ observer:
   enabled: true
   idle_timeout: 30
   scan_interval: 1
+  tool_scan_interval: 0.1
 
 server:
   host: 127.0.0.1

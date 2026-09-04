@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
 
-import { applyHistoryEvent, loadHistory, restoreLiveSnapshot } from "../api/history";
-import type { AgentEvent } from "../models/agent";
+import { applyReplayAction, buildReplayTimeline, loadHistory, replayDelay, restoreLiveSnapshot, type ReplayAction } from "../api/history";
 import { useAgentStore } from "../store/agents";
 
 const SPEEDS = [1, 2, 5] as const;
 
 export function ReplayControls() {
-  const [events, setEvents] = useState<AgentEvent[]>([]);
+  const [events, setEvents] = useState<ReplayAction[]>([]);
   const [cursor, setCursor] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState<(typeof SPEEDS)[number]>(1);
@@ -16,9 +15,9 @@ export function ReplayControls() {
   useEffect(() => {
     if (!replayMode || !playing || cursor >= events.length) return;
     const timer = window.setTimeout(() => {
-      applyHistoryEvent(events[cursor]);
+      applyReplayAction(events[cursor]);
       setCursor((value) => value + 1);
-    }, 800 / speed);
+    }, replayDelay(events, cursor, speed));
     return () => window.clearTimeout(timer);
   }, [cursor, events, playing, replayMode, speed]);
 
@@ -30,7 +29,7 @@ export function ReplayControls() {
     const history = await loadHistory();
     useAgentStore.getState().reset();
     useAgentStore.getState().setReplayMode(true);
-    setEvents(history);
+    setEvents(buildReplayTimeline(history));
     setCursor(0);
     setPlaying(true);
   };

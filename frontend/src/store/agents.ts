@@ -14,6 +14,7 @@ interface AgentStore {
   connection: ConnectionState;
   simulationPaused: boolean;
   replayMode: boolean;
+  deskCount: number;
   addAgent: (agent: Agent) => void;
   removeAgent: (id: string) => void;
   updateAgent: (id: string, changes: Partial<Agent>) => void;
@@ -27,6 +28,7 @@ interface AgentStore {
   setConnection: (connection: ConnectionState) => void;
   setSimulationPaused: (paused: boolean) => void;
   setReplayMode: (enabled: boolean) => void;
+  setDeskCount: (count: number) => void;
   reset: () => void;
 }
 
@@ -40,6 +42,7 @@ const initialState = {
   connection: "disconnected" as ConnectionState,
   simulationPaused: false,
   replayMode: false,
+  deskCount: 8,
 };
 
 export const useAgentStore = create<AgentStore>((set) => ({
@@ -85,5 +88,6 @@ export const useAgentStore = create<AgentStore>((set) => ({
   setConnection: (connection) => set({ connection }),
   setSimulationPaused: (simulationPaused) => set({ simulationPaused }),
   setReplayMode: (replayMode) => set({ replayMode, connection: replayMode ? "replay" : "connected" }),
+  setDeskCount: (deskCount) => set({ deskCount }),
   reset: () => set(initialState),
 }));

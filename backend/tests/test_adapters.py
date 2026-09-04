@@ -61,6 +61,8 @@ def test_commands_are_classified_into_domain_states(command: str, state: AgentSt
         ("npm run build", "build"),
         ("ruff check .", "lint"),
         ("bash -lc pwd", "shell"),
+        ('bash -lc "rg AgentState backend"', "search"),
+        ('bash -lc "npm run build"', "build"),
     ],
 )
 def test_tool_commands_are_named_for_the_office(command: str, kind: str) -> None:

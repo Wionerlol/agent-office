@@ -29,6 +29,7 @@ def test_rest_and_websocket_expose_the_same_live_agents(tmp_path: Path) -> None:
         assert client.get("/api/agents/frontend").json()["status"] == "coding"
         project = client.get("/api/project").json()
         assert project["path"] == str(tmp_path)
+        assert client.get("/api/config").json() == {"desks": 8}
 
         with client.websocket_connect("/ws") as websocket:
             snapshot = websocket.receive_json()

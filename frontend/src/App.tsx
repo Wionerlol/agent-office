@@ -50,7 +50,7 @@ function App() {
       <Achievements agents={agents} />
       <section className="workspace">
         <div className="scene-column">
-          <OfficeScene agents={agents} />
+          <OfficeScene agents={agents} deskCount={store.deskCount} />
           <DebugPanel agents={agents} enabled={debugOpen} />
         </div>
         <AgentPanel agent={selected} events={store.recentEvents} onClose={() => store.selectAgent(null)} />

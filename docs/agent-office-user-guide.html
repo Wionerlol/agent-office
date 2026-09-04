@@ -156,6 +156,7 @@ observer:
   enabled: true
   idle_timeout: 30
   scan_interval: 1
+  tool_scan_interval: 0.1
 server:
   host: 127.0.0.1
   port: 8000
@@ -174,6 +175,7 @@ runtime_path: runtime/events.jsonl</code></pre>
           <tr><td><code>GET /health</code></td><td>服务健康状态</td></tr><tr><td><code>GET /api/agents</code></td><td>当前活动 Agent</td></tr>
           <tr><td><code>GET /api/agents/{id}</code></td><td>完整 Agent 详情</td></tr><tr><td><code>GET /api/project</code></td><td>当前项目与分支</td></tr>
           <tr><td><code>GET /api/projects</code></td><td>已配置项目列表</td></tr><tr><td><code>GET /api/history</code></td><td>历史事件；支持 <code>agent_id</code> 和 <code>limit</code></td></tr>
+          <tr><td><code>GET /api/config</code></td><td>前端可安全读取的办公室配置</td></tr>
           <tr><td><code>POST /api/events</code></td><td>提交标准 <code>AgentEvent</code></td></tr><tr><td><code>WS /ws</code></td><td>首次快照与后续增量</td></tr>
         </tbody></table>
         <h3>提交事件示例</h3>
