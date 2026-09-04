@@ -108,6 +108,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             runtime.bus.unsubscribe(queue)
 
     dist = Path(__file__).parents[2] / "frontend" / "dist"
+    guide = Path(__file__).parents[2] / "docs" / "agent-office-user-guide.html"
+    if guide.exists():
+
+        @app.get("/guide", include_in_schema=False)
+        async def user_guide() -> FileResponse:
+            return FileResponse(guide)
+
     if dist.exists():
         assets = dist / "assets"
         if assets.exists():

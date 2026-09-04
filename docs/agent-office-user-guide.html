@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Agent Office 使用手册</title>
+  <style>
+    :root { --ink:#e9eee9; --muted:#a9b8b2; --paper:#10191c; --panel:#182529; --line:#314347; --accent:#8cc2ad; --warm:#e5bb75; --code:#0b1214; }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { margin:0; color:var(--ink); background:radial-gradient(circle at 20% 0,#294045 0,var(--paper) 42rem); font:16px/1.65 Inter,ui-sans-serif,system-ui,sans-serif; }
+    a { color:var(--accent); }
+    .layout { display:grid; grid-template-columns:250px minmax(0,850px); gap:48px; width:min(1180px,calc(100% - 40px)); margin:auto; }
+    nav { position:sticky; top:0; height:100vh; padding:38px 0; overflow:auto; }
+    nav strong { display:block; margin-bottom:18px; font:600 1.08rem Georgia,serif; color:#fff; }
+    nav a { display:block; padding:6px 0; color:var(--muted); text-decoration:none; font-size:.86rem; }
+    nav a:hover { color:var(--accent); }
+    main { padding:72px 0 100px; min-width:0; }
+    header { border-bottom:1px solid var(--line); padding-bottom:38px; margin-bottom:42px; }
+    .kicker { color:var(--accent); font:.75rem ui-monospace,monospace; letter-spacing:.14em; text-transform:uppercase; }
+    h1 { margin:.2rem 0 1rem; font:500 clamp(2.8rem,7vw,5.4rem)/.95 Georgia,serif; letter-spacing:-.055em; }
+    h2 { margin:3.2rem 0 1rem; padding-top:.6rem; font:500 1.75rem Georgia,serif; color:#fff; }
+    h3 { margin:2rem 0 .5rem; font-size:1rem; color:var(--warm); }
+    p { max-width:72ch; }
+    .lead { color:#c5d0cb; font-size:1.15rem; max-width:62ch; }
+    .badges { display:flex; flex-wrap:wrap; gap:8px; margin-top:20px; }
+    .badge { border:1px solid var(--line); border-radius:999px; padding:4px 10px; color:var(--muted); font:.75rem ui-monospace,monospace; }
+    .callout { margin:22px 0; border-left:3px solid var(--accent); background:var(--panel); padding:14px 18px; border-radius:0 8px 8px 0; }
+    .warning { border-left-color:var(--warm); }
+    pre { position:relative; overflow:auto; margin:12px 0 22px; border:1px solid var(--line); border-radius:10px; background:var(--code); padding:16px 18px; color:#dce9e3; font:13px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace; }
+    code { color:#bfe1d2; font-family:ui-monospace,SFMono-Regular,Consolas,monospace; }
+    :not(pre)>code { background:#1b2b2e; border-radius:4px; padding:2px 5px; font-size:.9em; }
+    table { width:100%; border-collapse:collapse; margin:16px 0 26px; font-size:.9rem; }
+    th,td { border-bottom:1px solid var(--line); padding:10px 12px; text-align:left; vertical-align:top; }
+    th { color:var(--accent); font:600 .75rem ui-monospace,monospace; letter-spacing:.06em; text-transform:uppercase; }
+    ul,ol { padding-left:1.3rem; }
+    li { margin:.35rem 0; }
+    .flow { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:20px 0; color:#dce8e3; }
+    .flow span { border:1px solid var(--line); background:var(--panel); border-radius:7px; padding:8px 11px; }
+    .flow i { color:var(--accent); font-style:normal; }
+    details { border:1px solid var(--line); border-radius:9px; margin:10px 0; background:var(--panel); }
+    summary { cursor:pointer; padding:12px 15px; color:#dce8e3; font-weight:600; }
+    details p { padding:0 15px 12px; margin:.2rem 0; color:var(--muted); }
+    footer { border-top:1px solid var(--line); margin-top:60px; padding-top:24px; color:var(--muted); font-size:.82rem; }
+    @media (max-width:850px) { .layout{display:block;width:min(100% - 28px,850px)} nav{position:static;height:auto;padding:24px 0 0;columns:2} nav strong{column-span:all} main{padding-top:38px} }
+    @media print { :root{--ink:#172326;--muted:#4f5c59;--paper:#fff;--panel:#f2f5f3;--line:#cad3cf;--code:#f4f6f5;--accent:#276b59;--warm:#805c21} body{background:#fff} nav{display:none}.layout{display:block;width:100%}main{padding:0}pre{white-space:pre-wrap}h2{break-after:avoid;color:#111} }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <nav aria-label="文档目录">
+      <strong>Agent Office 手册</strong>
+      <a href="#overview">概览</a>
+      <a href="#requirements">环境要求</a>
+      <a href="#quick-start">快速启动</a>
+      <a href="#agents">接入真实 Agent</a>
+      <a href="#interface">界面操作</a>
+      <a href="#states">状态与区域</a>
+      <a href="#configuration">配置</a>
+      <a href="#api">HTTP / WebSocket</a>
+      <a href="#architecture">架构</a>
+      <a href="#development">开发与验证</a>
+      <a href="#troubleshooting">故障排查</a>
+    </nav>
+    <main>
+      <header id="overview">
+        <div class="kicker">Local agent observability · v0.1.0</div>
+        <h1>Agent Office<br>使用手册</h1>
+        <p class="lead">把本地 Codex、Claude、OpenCode 或自定义进程的活动转换为统一事件，再用实时 2D 办公室展示谁在编码、测试、搜索、等待或报错。</p>
+        <div class="badges"><span class="badge">Python 3.13+</span><span class="badge">FastAPI</span><span class="badge">React + TypeScript</span><span class="badge">PixiJS</span><span class="badge">本地优先</span></div>
+      </header>
+
+      <section id="requirements">
+        <h2>环境要求</h2>
+        <table><thead><tr><th>工具</th><th>建议版本</th><th>用途</th></tr></thead><tbody>
+          <tr><td><code>uv</code></td><td>0.10+</td><td>Python、依赖和命令管理</td></tr>
+          <tr><td>Python</td><td>3.13+</td><td>FastAPI 后端与观察器</td></tr>
+          <tr><td>Node.js</td><td>22 LTS</td><td>前端构建与测试</td></tr>
+          <tr><td>Git</td><td>2.x</td><td>分支、worktree 和改动检测</td></tr>
+        </tbody></table>
+      </section>
+
+      <section id="quick-start">
+        <h2>快速启动</h2>
+        <h3>生产式单端口启动</h3>
+        <pre><code>uv sync
+cd frontend
+npm install
+npm run build
+cd ..
+uv run agent-office</code></pre>
+        <p>打开 <a href="http://127.0.0.1:8000">http://127.0.0.1:8000</a>。后端同时提供打包后的 UI、REST 接口和 WebSocket。</p>
+        <h3>前后端开发模式</h3>
+        <pre><code># 终端 1
+uv run uvicorn backend.main:app --reload
+
+# 终端 2
+cd frontend
+npm run dev</code></pre>
+        <p>开发 UI 位于 <code>http://127.0.0.1:5173</code>，Vite 会代理 <code>/api</code>、<code>/health</code> 和 <code>/ws</code>。</p>
+        <div class="callout"><strong>无真实 Agent 也能体验：</strong>访问 <code>/?demo=true</code>，页面会生成 4 个模拟角色并每 5–10 秒随机切换状态。</div>
+      </section>
+
+      <section id="agents">
+        <h2>接入真实 Agent</h2>
+        <p>保持 Agent Office 服务运行，再用 <code>office-run</code> 启动 Agent。Wrapper 会注册 PID、Provider、仓库、分支和 worktree，并记录完整退出生命周期。</p>
+        <pre><code>uv run office-run codex \
+  --name Backend \
+  --role Backend \
+  --task "Implement authentication API" \
+  --repo /home/user/projects/demo</code></pre>
+        <p>Provider 后面的未知参数会原样传给真实命令，例如：</p>
+        <pre><code>uv run office-run claude --name Reviewer --repo /path/to/repo --dangerously-skip-permissions
+uv run office-run opencode --name UI-Agent --role Frontend
+uv run office-run my-agent --name Custom --server http://127.0.0.1:8000/api/events</code></pre>
+        <p>若服务暂时不可达，Wrapper 会把事件回退写入 <code>runtime/events.jsonl</code>；下次服务启动时会恢复该历史。</p>
+      </section>
+
+      <section id="interface">
+        <h2>界面操作</h2>
+        <ul>
+          <li><strong>办公室：</strong>角色沿 A* 路径移动到当前状态对应区域；点击角色打开详情。</li>
+          <li><strong>详情面板：</strong>查看 Provider、角色、个性、任务、PID、分支、worktree、工具、改动文件和最近事件。</li>
+          <li><strong>Project：</strong>配置多个仓库后，选择单个仓库或查看全部；worktree Agent 会跟随对应项目筛选。</li>
+          <li><strong>Replay history：</strong>加载 JSONL 历史，支持暂停、继续和 1×/2×/5×速度；点 <em>Live</em> 返回实时快照。</li>
+          <li><strong>Debug controls：</strong>生成/删除 Agent、随机化状态、制造错误和重置。在线模式通过后端事件执行，模拟模式只修改本地状态。</li>
+          <li><strong>连接状态：</strong><code>connected</code>、<code>reconnecting</code>、<code>disconnected</code>、<code>simulation</code> 或 <code>replay</code>。</li>
+        </ul>
+      </section>
+
+      <section id="states">
+        <h2>状态与空间映射</h2>
+        <table><thead><tr><th>状态</th><th>区域</th><th>视觉行为</th></tr></thead><tbody>
+          <tr><td>starting</td><td>Entrance</td><td>入场</td></tr><tr><td>thinking</td><td>Assigned Desk</td><td>思考</td></tr>
+          <tr><td>coding</td><td>Assigned Desk</td><td>输入</td></tr><tr><td>searching</td><td>Library</td><td>阅读</td></tr>
+          <tr><td>tool_running</td><td>Tool Lab</td><td>操作设备</td></tr><tr><td>testing</td><td>Test Lab</td><td>测试</td></tr>
+          <tr><td>waiting</td><td>Lounge</td><td>等待</td></tr><tr><td>idle</td><td>Coffee Area</td><td>休息</td></tr>
+          <tr><td>error</td><td>Desk</td><td>红色脉冲</td></tr><tr><td>done</td><td>Desk</td><td>庆祝</td></tr>
+          <tr><td>offline</td><td>Exit</td><td>离场后移除</td></tr>
+        </tbody></table>
+      </section>
+
+      <section id="configuration">
+        <h2>配置</h2>
+        <p>编辑 <code>config/office.yaml</code>。相对路径按仓库根目录解析。</p>
+        <pre><code>project:
+  name: agent-office
+  path: .
+projects:
+  - name: agent-office
+    path: .
+  - name: another-repo
+    path: ../another-repo
+observer:
+  enabled: true
+  idle_timeout: 30
+  scan_interval: 1
+server:
+  host: 127.0.0.1
+  port: 8000
+office:
+  desks: 8
+frontend:
+  port: 5173
+runtime_path: runtime/events.jsonl</code></pre>
+        <p>用 <code>AGENT_OFFICE_CONFIG</code> 指向其他配置，用 <code>AGENT_OFFICE_LOG_LEVEL=DEBUG</code> 开启详细日志。</p>
+        <div class="callout warning"><strong>安全提示：</strong>接口没有身份认证。默认只绑定 <code>127.0.0.1</code>；除非已放在受保护的反向代理之后，否则不要暴露到公网。</div>
+      </section>
+
+      <section id="api">
+        <h2>HTTP / WebSocket</h2>
+        <table><thead><tr><th>接口</th><th>说明</th></tr></thead><tbody>
+          <tr><td><code>GET /health</code></td><td>服务健康状态</td></tr><tr><td><code>GET /api/agents</code></td><td>当前活动 Agent</td></tr>
+          <tr><td><code>GET /api/agents/{id}</code></td><td>完整 Agent 详情</td></tr><tr><td><code>GET /api/project</code></td><td>当前项目与分支</td></tr>
+          <tr><td><code>GET /api/projects</code></td><td>已配置项目列表</td></tr><tr><td><code>GET /api/history</code></td><td>历史事件；支持 <code>agent_id</code> 和 <code>limit</code></td></tr>
+          <tr><td><code>POST /api/events</code></td><td>提交标准 <code>AgentEvent</code></td></tr><tr><td><code>WS /ws</code></td><td>首次快照与后续增量</td></tr>
+        </tbody></table>
+        <h3>提交事件示例</h3>
+        <pre><code>curl -X POST http://127.0.0.1:8000/api/events \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "type":"agent.state_changed",
+    "agent_id":"backend",
+    "timestamp":"2026-09-04T16:00:00+08:00",
+    "payload":{"from":"coding","to":"testing"}
+  }'</code></pre>
+        <p>WebSocket 首帧为 <code>{"type":"snapshot","agents":[]}</code>，随后推送 <code>agent.started</code>、<code>agent.updated</code> 和 <code>agent.stopped</code>。</p>
+      </section>
+
+      <section id="architecture">
+        <h2>架构</h2>
+        <div class="flow"><span>Process / Git / FS / Wrapper</span><i>→</i><span>Provider Adapter</span><i>→</i><span>AgentEvent</span><i>→</i><span>OfficeRuntime</span><i>→</i><span>REST / WebSocket / JSONL</span><i>→</i><span>React + PixiJS</span></div>
+        <p><code>OfficeRuntime.apply(event)</code> 是状态变更的唯一入口。前端不判断 Codex 或 Claude 的私有行为，只理解 <code>Agent</code>、<code>AgentState</code> 和 <code>AgentEvent</code>。</p>
+        <table><thead><tr><th>版本</th><th>交付能力</th></tr></thead><tbody>
+          <tr><td>V0</td><td>2D 模拟办公室、详情、调试、模拟事件</td></tr><tr><td>V1</td><td>状态引擎、注册表、REST、WebSocket</td></tr>
+          <tr><td>V2</td><td>进程、Git、文件系统观察</td></tr><tr><td>V3</td><td><code>office-run</code> 与真实 Agent 生命周期</td></tr>
+          <tr><td>V4</td><td>测试、搜索和通用工具状态识别</td></tr><tr><td>V5</td><td>JSONL 历史回放</td></tr>
+          <tr><td>V6</td><td>多 Agent、Provider、仓库与 worktree</td></tr><tr><td>V7</td><td>A*、昼夜氛围、装饰、个性和成就</td></tr>
+        </tbody></table>
+      </section>
+
+      <section id="development">
+        <h2>开发与验证</h2>
+        <pre><code># 后端
+uv run pytest
+uv run ruff check backend main.py
+
+# 前端
+cd frontend
+npm test
+npm run lint
+npm run build</code></pre>
+        <p>后端测试覆盖状态投影、事件存储、REST/WS、历史、Git/文件系统、真实子进程 Adapter、观察器管理和 Wrapper 生命周期。前端测试覆盖 Store、WebSocket 归一化、回放、项目/worktree 筛选、状态视觉映射和 A*。</p>
+      </section>
+
+      <section id="troubleshooting">
+        <h2>故障排查</h2>
+        <details><summary>页面显示 disconnected 或 reconnecting</summary><p>确认后端位于 8000 端口，检查 <code>curl http://127.0.0.1:8000/health</code>。开发模式还需确认 Vite 代理配置未改变。</p></details>
+        <details><summary>办公室没有出现 Agent</summary><p>用 <code>office-run</code> 启动进程，或确认进程名是 Codex/Claude/OpenCode。若正在筛选 Project，检查 Agent 的 repository/worktree 是否匹配。</p></details>
+        <details><summary>Agent 很快进入 idle</summary><p>提高 <code>observer.idle_timeout</code>；任何标准事件或文件改动都会刷新最后活动时间。</p></details>
+        <details><summary>历史回放为空</summary><p>检查 <code>runtime_path</code> 和 JSONL 文件权限。通过 HTTP 成功提交或 Wrapper 回退写入的事件都会出现在这里。</p></details>
+        <details><summary>修改前端后首页未更新</summary><p>生产式启动读取 <code>frontend/dist</code>；重新运行 <code>cd frontend &amp;&amp; npm run build</code>，或使用 Vite 开发服务器。</p></details>
+      </section>
+      <footer>Agent Office 使用手册 · 与仓库 v0.1.0 同步 · 可直接打印为 PDF 或离线保存。</footer>
+    </main>
+  </div>
+</body>
+</html>

@@ -23,6 +23,7 @@ def test_rest_and_websocket_expose_the_same_live_agents(tmp_path):
 
     with TestClient(app) as client:
         assert client.get("/health").json() == {"status": "ok"}
+        assert client.get("/guide").status_code == 200
         assert client.get("/api/agents").json()[0]["id"] == "frontend"
         assert client.get("/api/agents/frontend").json()["status"] == "coding"
         project = client.get("/api/project").json()
