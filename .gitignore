@@ -8,3 +8,11 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Frontend-generated files
+node_modules/
+frontend/dist/
+*.tsbuildinfo
+
+# Runtime-generated data
+runtime/*.jsonl
