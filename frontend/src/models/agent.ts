@@ -42,5 +42,5 @@ export interface AgentEvent {
 export interface ProjectInfo {
   name: string;
   path: string;
-  branch: string | null;
+  branch?: string | null;
 }

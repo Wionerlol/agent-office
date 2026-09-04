@@ -9,6 +9,7 @@ type ServerMessage =
 
 export function applyServerMessage(message: ServerMessage): void {
   const store = useAgentStore.getState();
+  if (store.replayMode) return;
   if (message.type === "snapshot") {
     store.replaceAgents(message.agents);
     return;
@@ -18,7 +19,8 @@ export function applyServerMessage(message: ServerMessage): void {
     return;
   }
   if (message.type === "agent.stopped") {
-    store.removeAgent(message.agent_id);
+    store.setAgentStatus(message.agent_id, "offline");
+    window.setTimeout(() => useAgentStore.getState().removeAgent(message.agent_id), 1800);
     return;
   }
   store.updateAgent(message.agent_id, message.changes);
@@ -80,7 +82,29 @@ export function connectOfficeWebSocket(url?: string): () => void {
 }
 
 export async function loadProject(): Promise<void> {
-  const response = await fetch("/api/project");
-  if (!response.ok) throw new Error(`Project request failed: ${response.status}`);
-  useAgentStore.getState().setProject(await response.json());
+  const [projectResponse, projectsResponse] = await Promise.all([
+    fetch("/api/project"),
+    fetch("/api/projects"),
+  ]);
+  if (!projectResponse.ok) throw new Error(`Project request failed: ${projectResponse.status}`);
+  useAgentStore.getState().setProject(await projectResponse.json());
+  if (projectsResponse.ok) useAgentStore.getState().setProjects(await projectsResponse.json());
+}
+
+export async function sendAgentEvent(
+  type: string,
+  agentId: string,
+  payload: Record<string, unknown> = {},
+): Promise<void> {
+  const response = await fetch("/api/events", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      type,
+      agent_id: agentId,
+      timestamp: new Date().toISOString(),
+      payload,
+    }),
+  });
+  if (!response.ok) throw new Error(`Event request failed: ${response.status}`);
 }

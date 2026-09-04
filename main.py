@@ -1,5 +1,8 @@
+from backend.main import run
+
+
 def main():
-    print("Hello from agent-office!")
+    run()
 
 
 if __name__ == "__main__":

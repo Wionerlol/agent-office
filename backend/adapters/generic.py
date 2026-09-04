@@ -21,7 +21,7 @@ class GenericProcessAdapter(AgentAdapter):
         scan_interval: float = 1.0,
     ) -> None:
         self.processes = ProcessObserver(pids)
-        self.command_names = command_names or KNOWN_PROVIDERS
+        self.command_names = command_names if command_names is not None else KNOWN_PROVIDERS
         self.provider = provider
         self.scan_interval = scan_interval
 
@@ -67,3 +67,10 @@ class GenericProcessAdapter(AgentAdapter):
             last_active_at=created,
             metadata={"command": process.command},
         )
+
+
+class CustomAgentAdapter(GenericProcessAdapter):
+    """Detect only explicitly tagged custom processes."""
+
+    def __init__(self, **kwargs: object) -> None:
+        super().__init__(command_names=set(), provider="custom", **kwargs)

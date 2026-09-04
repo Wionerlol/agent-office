@@ -12,6 +12,13 @@ h2 { margin-bottom: .65rem; }
 h3 { margin: 1.4rem 0 .5rem; font-size: .88rem; text-transform: uppercase; letter-spacing: .08em; }
 .eyebrow { margin-bottom: .28rem; color: #9db9b5; text-transform: uppercase; letter-spacing: .14em; font: 700 .69rem monospace; }
 .header-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.project-selector { display: flex; align-items: center; gap: 7px; color: #bed0cc; font: .76rem monospace; text-transform: uppercase; }
+.project-selector select { max-width: 170px; border: 1px solid #506568; border-radius: 7px; background: #26383c; color: #f4efe2; padding: .45rem; }
+.replay-controls { display: flex; align-items: center; gap: 5px; color: #bed0cc; font: .75rem monospace; }
+.replay-controls button { padding: .42rem .58rem; }
+.replay-controls button.active { background: #9fc4b5; }
+.achievements { display: flex; flex-wrap: wrap; gap: 8px; margin: -6px 0 14px; color: #caddd5; font: .72rem monospace; }
+.achievements span { border: 1px solid #4a6162; border-radius: 999px; padding: .28rem .55rem; }
 .connection, .agent-count { display: inline-flex; align-items: center; gap: 7px; padding: .5rem .75rem; border: 1px solid #4e6466; border-radius: 999px; font: .76rem monospace; text-transform: uppercase; }
 .connection i { width: 8px; height: 8px; border-radius: 50%; background: #d29a54; }
 .connection-connected i { background: #70b27c; }.connection-disconnected i { background: #cb6860; }

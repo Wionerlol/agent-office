@@ -2,7 +2,7 @@ import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -77,6 +77,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return await runtime.apply(event)
         except KeyError as error:
             raise HTTPException(status_code=404, detail=str(error)) from error
+
+    @app.get("/api/history")
+    async def history(
+        agent_id: str | None = None,
+        limit: int = Query(default=1000, ge=1, le=10_000),
+    ) -> list[AgentEvent]:
+        events = runtime.storage.read()
+        if agent_id:
+            events = [event for event in events if event.agent_id == agent_id]
+        return events[-limit:]
 
     @app.websocket("/ws")
     async def websocket_endpoint(websocket: WebSocket) -> None:

@@ -1,10 +1,14 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useAgentStore } from "../store/agents";
 import { applyServerMessage } from "./websocket";
 
 describe("WebSocket messages", () => {
-  beforeEach(() => useAgentStore.getState().reset());
+  beforeEach(() => {
+    vi.useFakeTimers();
+    useAgentStore.getState().reset();
+  });
+  afterEach(() => vi.useRealTimers());
 
   it("normalizes snapshots and incremental updates into the store", () => {
     applyServerMessage({
@@ -16,6 +20,8 @@ describe("WebSocket messages", () => {
     expect(useAgentStore.getState().agents.worker.status).toBe("testing");
 
     applyServerMessage({ type: "agent.stopped", agent_id: "worker" });
+    expect(useAgentStore.getState().agents.worker.status).toBe("offline");
+    vi.advanceTimersByTime(1800);
     expect(useAgentStore.getState().agents.worker).toBeUndefined();
   });
 });
