@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
+import { connectOfficeWebSocket, loadProject } from "./api/websocket";
 import { AgentPanel } from "./components/AgentPanel";
 import { DebugPanel } from "./components/DebugPanel";
 import { demoAgents } from "./data/demo";
@@ -10,7 +11,7 @@ import { useAgentStore } from "./store/agents";
 function App() {
   const store = useAgentStore();
   const [debugOpen, setDebugOpen] = useState(true);
-  const [demoMode] = useState(() => new URLSearchParams(window.location.search).get("demo") !== "false");
+  const [demoMode] = useState(() => new URLSearchParams(window.location.search).get("demo") === "true");
   const agents = useMemo(() => Object.values(store.agents), [store.agents]);
   const selected = store.selectedAgentId ? store.agents[store.selectedAgentId] ?? null : null;
 
@@ -19,13 +20,17 @@ function App() {
       useAgentStore.getState().replaceAgents(demoAgents);
       useAgentStore.getState().setConnection("simulation");
     }
+    if (!demoMode) {
+      void loadProject().catch(() => undefined);
+      return connectOfficeWebSocket();
+    }
   }, [demoMode]);
   useSimulation(demoMode);
 
   return (
     <main>
       <header className="topbar">
-        <div><p className="eyebrow">Local runtime observatory</p><h1>Agent Office</h1></div>
+        <div><p className="eyebrow">{store.project?.name ?? "Local runtime observatory"}</p><h1>Agent Office</h1></div>
         <div className="header-actions">
           <span className={`connection connection-${store.connection}`}><i />{store.connection}</span>
           <span className="agent-count">{agents.length} agents</span>

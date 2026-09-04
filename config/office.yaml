@@ -1,0 +1,23 @@
+project:
+  name: agent-office
+  path: .
+
+projects:
+  - name: agent-office
+    path: .
+
+observer:
+  idle_timeout: 30
+  scan_interval: 1
+
+server:
+  host: 127.0.0.1
+  port: 8000
+
+office:
+  desks: 8
+
+frontend:
+  port: 5173
+
+runtime_path: runtime/events.jsonl
