@@ -10,6 +10,7 @@ class ProjectSettings(BaseModel):
 
 
 class ObserverSettings(BaseModel):
+    enabled: bool = True
     idle_timeout: float = 30.0
     scan_interval: float = 1.0
 
@@ -45,6 +46,9 @@ class Settings(BaseModel):
         settings = cls.model_validate(raw)
         if not settings.project.path.is_absolute():
             settings.project.path = (config_path.parent.parent / settings.project.path).resolve()
+        for project in settings.projects:
+            if not project.path.is_absolute():
+                project.path = (config_path.parent.parent / project.path).resolve()
         if not settings.runtime_path.is_absolute():
             settings.runtime_path = (config_path.parent.parent / settings.runtime_path).resolve()
         return settings
@@ -55,5 +59,6 @@ class Settings(BaseModel):
         return cls(
             project=ProjectSettings(name=path.name, path=path),
             projects=[ProjectSettings(name=path.name, path=path)],
+            observer=ObserverSettings(enabled=False),
             runtime_path=path / "runtime" / "events.jsonl",
         )

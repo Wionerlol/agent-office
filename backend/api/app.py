@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 
 from backend.config import Settings
 from backend.models import AgentEvent, ProjectInfo
+from backend.observer.manager import ObserverManager
 from backend.runtime.office import OfficeRuntime
 from backend.runtime.storage import EventStorage
 
@@ -16,15 +17,20 @@ from backend.runtime.storage import EventStorage
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or Settings.load()
     runtime = OfficeRuntime(EventStorage(settings.runtime_path))
+    observer = ObserverManager(runtime, settings.observer)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
         await runtime.restore()
+        if settings.observer.enabled:
+            observer.start()
         yield
+        await observer.stop()
 
     app = FastAPI(title="Agent Office", version="0.1.0", lifespan=lifespan)
     app.state.settings = settings
     app.state.runtime = runtime
+    app.state.observer = observer
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[f"http://localhost:{settings.frontend.port}", f"http://127.0.0.1:{settings.frontend.port}"],

@@ -1,6 +1,7 @@
 from typing import Any
 
 from backend.models import Agent, AgentEvent, AgentEventType, AgentState
+from backend.observer.tools import state_for_command
 from backend.runtime.bus import EventBus
 from backend.runtime.storage import EventStorage
 from backend.state.registry import AgentRegistry
@@ -51,7 +52,8 @@ class OfficeRuntime:
             changes["task"] = event.payload.get("task")
         elif event.type is AgentEventType.TOOL_STARTED:
             changes["current_tool"] = event.payload.get("tool")
-            changes["status"] = AgentState.TOOL_RUNNING
+            command = event.payload.get("command") or event.payload.get("tool") or ""
+            changes["status"] = state_for_command(str(command))
         elif event.type is AgentEventType.TOOL_FINISHED:
             changes["current_tool"] = None
             changes["status"] = AgentState(event.payload.get("next_state", AgentState.THINKING))

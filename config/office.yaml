@@ -7,6 +7,7 @@ projects:
     path: .
 
 observer:
+  enabled: true
   idle_timeout: 30
   scan_interval: 1
 
