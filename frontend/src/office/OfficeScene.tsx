@@ -118,6 +118,8 @@ export function OfficeScene({ agents, deskCount }: OfficeSceneProps) {
     void app.init({ width: OFFICE_WIDTH, height: OFFICE_HEIGHT, antialias: true, backgroundColor: 0x202d31, resolution: Math.min(window.devicePixelRatio, 2), autoDensity: true }).then(() => {
       if (cancelled) return app.destroy();
       app.canvas.className = "office-canvas";
+      app.canvas.style.width = "100%";
+      app.canvas.style.height = "100%";
       host.appendChild(app.canvas);
       app.stage.sortableChildren = true;
       drawOfficeScenery(app);
