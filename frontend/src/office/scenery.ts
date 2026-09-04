@@ -121,12 +121,6 @@ function drawLibrary(scene: Container): void {
     const colors = [0xa9574d, 0x567c73, 0xc1954c, 0x6e6386];
     shelf.rect(x, 79, 9, 23).fill(colors[Math.floor(x / 13) % colors.length]);
   }
-  for (const x of [1039]) {
-    shelf.roundRect(x, 116, 25, 78, 3).fill(0x795a42);
-    for (let y = 123; y < 187; y += 14) {
-      shelf.rect(x + 5, y, 15, 9).fill(y % 28 ? 0xa9574d : 0x567c73);
-    }
-  }
   shelf.roundRect(892, 126, 100, 20, 8).fill(0xb28a62);
   shelf.circle(910, 150, 13).fill(0x657a76).circle(974, 150, 13).fill(0x657a76);
   scene.addChild(shelf);
@@ -145,10 +139,11 @@ function drawCoffeeArea(scene: Container): void {
 function drawLounge(scene: Container): void {
   const lounge = new Graphics();
   lounge.roundRect(400, 493, 158, 118, 16).fill({ color: 0xb48c72, alpha: 0.28 });
-  lounge.roundRect(398, 505, 48, 88, 16).fill(0x69817d);
-  lounge.roundRect(510, 505, 48, 88, 16).fill(0x69817d);
-  lounge.roundRect(442, 543, 73, 34, 15).fill(0xa37959);
-  lounge.ellipse(478, 580, 37, 11).fill({ color: 0x47352d, alpha: 0.16 });
+  lounge.roundRect(400, 493, 158, 42, 14).fill(0x69817d);
+  lounge.roundRect(414, 500, 61, 27, 10).fill(0x78908b);
+  lounge.roundRect(483, 500, 61, 27, 10).fill(0x78908b);
+  lounge.ellipse(478, 603, 37, 11).fill({ color: 0x47352d, alpha: 0.16 });
+  lounge.roundRect(442, 590, 73, 25, 12).fill(0xa37959);
   scene.addChild(lounge);
 }
 
@@ -232,7 +227,8 @@ function drawForeground(scene: Container): void {
   }
   foreground.roundRect(46, 326, 80, 15, 4).fill(0x76563e);
   foreground.roundRect(188, 510, 145, 14, 3).fill(0x71513d);
-  foreground.roundRect(442, 559, 73, 18, 8).fill(0x8e684e);
+  foreground.roundRect(400, 522, 158, 13, 5).fill(0x536b67);
+  foreground.roundRect(442, 599, 73, 16, 8).fill(0x8e684e);
   foreground.roundRect(854, 430, 182, 16, 3).fill(0x806b55);
   scene.addChild(foreground);
 }

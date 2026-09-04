@@ -56,7 +56,7 @@ export function findPath(
       }
     }
   }
-  return [start, goal];
+  return [start];
 }
 
 interface Obstacle {
@@ -90,10 +90,9 @@ const FURNITURE: Obstacle[] = [
     .filter(([id]) => id.startsWith("desk-"))
     .map(([, point]) => ({ x: point.x - 54, y: point.y - 108, width: 108, height: 91 })),
   { x: 834, y: 74, width: 204, height: 34 },
-  { x: 1039, y: 116, width: 20, height: 78 },
   { x: 188, y: 459, width: 145, height: 65 },
-  { x: 400, y: 493, width: 46, height: 118 },
-  { x: 510, y: 493, width: 48, height: 118 },
+  { x: 400, y: 493, width: 158, height: 42 },
+  { x: 442, y: 590, width: 73, height: 25 },
   { x: 620, y: 482, width: 155, height: 68 },
   { x: 850, y: 274, width: 190, height: 60 },
   { x: 854, y: 404, width: 182, height: 42 },
@@ -127,6 +126,7 @@ export function routeBetween(start: Point, goal: Point): Point[] {
   const goalCell = toGrid(goal);
   const blocked = officeBlocked(startCell, goalCell);
   const cells = findPath(startCell, goalCell, blocked, GRID_WIDTH, GRID_HEIGHT);
+  if (cells.length === 1) return [];
   return [
     ...cells.slice(1, -1).map((cell) => ({
       x: (cell.x + 0.5) * CELL_SIZE,

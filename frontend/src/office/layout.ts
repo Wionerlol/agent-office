@@ -43,7 +43,7 @@ export const POSITIONS: Record<string, Point> = {
   "desk-7": { x: 550, y: 330 },
   "desk-8": { x: 700, y: 330 },
   library: { x: 942, y: 169 },
-  coffee_area: { x: 265, y: 558 },
+  coffee_area: { x: 275, y: 558 },
   lounge: { x: 477, y: 558 },
   tool_lab: { x: 705, y: 575 },
   test_lab: { x: 952, y: 370 },
@@ -53,10 +53,10 @@ export const POSITIONS: Record<string, Point> = {
 const SPREAD_BY_ZONE: Record<string, { columns: number; gapX: number; gapY: number }> = {
   entrance: { columns: 2, gapX: 100, gapY: 110 },
   library: { columns: 3, gapX: 100, gapY: 110 },
-  coffee_area: { columns: 2, gapX: 100, gapY: 110 },
-  lounge: { columns: 2, gapX: 100, gapY: 110 },
-  tool_lab: { columns: 2, gapX: 100, gapY: 110 },
-  test_lab: { columns: 2, gapX: 100, gapY: 110 },
+  coffee_area: { columns: 3, gapX: 100, gapY: 110 },
+  lounge: { columns: 3, gapX: 100, gapY: 110 },
+  tool_lab: { columns: 3, gapX: 100, gapY: 110 },
+  test_lab: { columns: 3, gapX: 100, gapY: 110 },
   exit: { columns: 2, gapX: 100, gapY: 110 },
 };
 
@@ -103,7 +103,9 @@ export function separateAgentPositions(
       .map(({ id, x, y }) => [id, { x, y }]),
   );
   const ids = [...positions.keys()];
-  for (let pass = 0; pass < 6; pass += 1) {
+  const maximumPasses = Math.max(12, ids.length * 8);
+  for (let pass = 0; pass < maximumPasses; pass += 1) {
+    let foundOverlap = false;
     for (let left = 0; left < ids.length; left += 1) {
       for (let right = left + 1; right < ids.length; right += 1) {
         const first = positions.get(ids[left])!;
@@ -112,6 +114,7 @@ export function separateAgentPositions(
         let deltaY = second.y - first.y;
         let distance = Math.hypot(deltaX, deltaY);
         if (distance >= minimumDistance) continue;
+        foundOverlap = true;
         if (distance === 0) {
           deltaX = 1;
           deltaY = 0;
@@ -124,6 +127,7 @@ export function separateAgentPositions(
         positions.set(ids[right], { x: second.x + offsetX, y: second.y + offsetY });
       }
     }
+    if (!foundOverlap) break;
   }
   return positions;
 }

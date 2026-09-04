@@ -42,11 +42,13 @@ describe("spreadAgentTargets", () => {
   });
 
   it("separates agents that meet while walking", () => {
-    const positions = separateAgentPositions([
-      { id: "alpha", x: 500, y: 300 },
-      { id: "bravo", x: 500, y: 300 },
-      { id: "charlie", x: 500, y: 300 },
-    ]);
+    const positions = separateAgentPositions(
+      Array.from({ length: 8 }, (_, index) => ({
+        id: `agent-${index}`,
+        x: 500,
+        y: 300,
+      })),
+    );
     const values = [...positions.values()];
 
     for (let left = 0; left < values.length; left += 1) {

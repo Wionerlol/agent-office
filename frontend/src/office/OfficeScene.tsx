@@ -16,6 +16,7 @@ interface OfficeSceneProps {
 interface RenderedAgent {
   container: Container;
   body: Container;
+  labels: Container;
   name: Text;
   status: Text;
   path: Point[];
@@ -79,11 +80,14 @@ function createRenderedAgent(agent: Agent, selectAgent: (id: string) => void): R
   status.anchor.set(0.5);
   status.position.set(0, 54);
   const statusPlate = new Graphics().roundRect(-33, 48, 66, 14, 7).fill({ color: 0x304b4d, alpha: 0.94 });
-  container.addChild(shadow, body, namePlate, name, statusPlate, status);
+  const labels = new Container();
+  labels.addChild(namePlate, name, statusPlate, status);
+  container.addChild(shadow, body, labels);
   container.position.set(POSITIONS.entrance.x, POSITIONS.entrance.y);
   return {
     container,
     body,
+    labels,
     name,
     status,
     path: [],
@@ -135,6 +139,7 @@ export function OfficeScene({ agents, deskCount }: OfficeSceneProps) {
           rendered.body.y = active ? Math.sin(time * 2) * 1.5 : 0;
           rendered.body.rotation = rendered.animation === "celebration" ? Math.sin(time * 2) * 0.12 : 0;
           rendered.body.alpha = rendered.animation === "error" ? 0.65 + Math.sin(time * 3) * 0.3 : 1;
+          rendered.labels.visible = rendered.path.length === 0;
           rendered.container.zIndex = 100 + Math.round(rendered.container.y);
         }
         const separated = separateAgentPositions(

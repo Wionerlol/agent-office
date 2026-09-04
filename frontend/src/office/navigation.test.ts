@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { POSITIONS, spreadAgentTargets } from "./layout";
 import { findPath, routeBetween } from "./navigation";
 
 describe("findPath", () => {
@@ -32,5 +33,16 @@ describe("office routing", () => {
     });
 
     expect(crossingY.some((y) => y >= 165 && y <= 215)).toBe(true);
+  });
+
+  it("can reach shared-area slots without using a direct obstacle fallback", () => {
+    for (const zone of ["library", "coffee_area", "lounge", "tool_lab", "test_lab", "exit"]) {
+      const slots = spreadAgentTargets(
+        ["alpha", "bravo", "charlie"].map((id) => ({ id, zone })),
+      );
+      for (const destination of slots.values()) {
+        expect(routeBetween(POSITIONS["desk-1"], destination).length).toBeGreaterThan(0);
+      }
+    }
   });
 });
