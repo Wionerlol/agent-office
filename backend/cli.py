@@ -91,7 +91,22 @@ def run_wrapped(
     return exit_code
 
 
-def build_parser() -> argparse.ArgumentParser:
+def _server_endpoint(settings: Settings) -> str:
+    host = settings.server.host
+    if host in {"0.0.0.0", "::", "[::]"}:
+        host = "127.0.0.1"
+    return f"http://{host}:{settings.server.port}/api/events"
+
+
+def load_cli_settings() -> Settings:
+    if configured_path := os.getenv("AGENT_OFFICE_CONFIG"):
+        return Settings.load(configured_path)
+    source_config = Path(__file__).resolve().parents[1] / "config" / "office.yaml"
+    return Settings.load(source_config if source_config.exists() else "config/office.yaml")
+
+
+def build_parser(settings: Settings | None = None) -> argparse.ArgumentParser:
+    settings = settings or Settings()
     parser = argparse.ArgumentParser(
         prog="office-run", description="Run an agent inside Agent Office"
     )
@@ -101,14 +116,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--role")
     parser.add_argument("--task")
     parser.add_argument("--repo", type=Path, default=Path.cwd())
-    parser.add_argument("--server", default="http://127.0.0.1:8000/api/events")
+    parser.add_argument("--server", default=_server_endpoint(settings))
     parser.add_argument("--events", type=Path)
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> None:
-    args, agent_args = build_parser().parse_known_args(argv)
-    settings = Settings.load()
+    settings = load_cli_settings()
+    parser = build_parser(settings)
+    args, agent_args = parser.parse_known_args(argv)
     event_path = args.events or settings.runtime_path
     emitter = FallbackEventEmitter(
         HttpEventEmitter(args.server),
@@ -126,7 +142,7 @@ def main(argv: Sequence[str] | None = None) -> None:
             agent_id=args.agent_id,
         )
     except FileNotFoundError as error:
-        build_parser().error(f"executable not found: {error.filename}")
+        parser.error(f"executable not found: {error.filename}")
     raise SystemExit(exit_code)
 
 
