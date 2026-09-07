@@ -17,6 +17,7 @@ const COLORS = {
 };
 
 const WINDOW = { x: 182, y: 38, width: 600, height: 132 };
+const WINDOW_DISPLAY_HEIGHT = 96;
 
 const ATMOSPHERE_COLORS: Record<OfficeAtmosphere, {
   skyTop: number;
@@ -121,14 +122,14 @@ function drawDesk(scene: Container, id: string, point: Point): void {
   const furniture = new Graphics();
   furniture.ellipse(x, y + 9, 31, 18).fill({ color: 0x243537, alpha: 0.18 });
   furniture.roundRect(x - 28, y - 2, 56, 37, 13).fill(COLORS.chair);
-  furniture.roundRect(x - 57, y - 66, 114, 49, 6).fill(COLORS.woodDark);
-  furniture.roundRect(x - 54, y - 64, 108, 42, 5).fill(COLORS.wood);
-  furniture.rect(x - 4, y - 77, 8, 15).fill(COLORS.metal);
-  furniture.roundRect(x - 31, y - 103, 62, 30, 4).fill(COLORS.ink);
-  furniture.roundRect(x - 27, y - 99, 54, 22, 2).fill(COLORS.screen);
-  furniture.rect(x - 22, y - 57, 44, 9).fill(0xddd6c7);
-  furniture.circle(x + 41, y - 46, 5).fill(0x5d4938);
-  scene.addChild(furniture, label(id.replace("desk-", "D"), x - 50, y - 57, { size: 8, color: 0xf7eddb }));
+  furniture.roundRect(x - 57, y - 48, 114, 36, 6).fill(COLORS.woodDark);
+  furniture.roundRect(x - 54, y - 46, 108, 31, 5).fill(COLORS.wood);
+  furniture.rect(x - 4, y - 53, 8, 10).fill(COLORS.metal);
+  furniture.roundRect(x - 31, y - 78, 62, 26, 4).fill(COLORS.ink);
+  furniture.roundRect(x - 27, y - 74, 54, 18, 2).fill(COLORS.screen);
+  furniture.rect(x - 22, y - 39, 44, 8).fill(0xddd6c7);
+  furniture.circle(x + 41, y - 31, 5).fill(0x5d4938);
+  scene.addChild(furniture, label(id.replace("desk-", "D"), x - 50, y - 39, { size: 8, color: 0xf7eddb }));
 }
 
 function drawOpenOffice(scene: Container): void {
@@ -280,6 +281,9 @@ function drawCityWindow(scene: Container, atmosphere: OfficeAtmosphere): void {
   for (const x of [382, 582]) city.rect(x, WINDOW.y, 7, WINDOW.height).fill({ color: 0x34494f, alpha: 0.86 });
   city.rect(WINDOW.x, WINDOW.y, WINDOW.width, WINDOW.height).stroke({ width: 4, color: 0xb9c9c9, alpha: 0.82 });
   city.moveTo(202, 48).lineTo(350, 48).lineTo(260, 154).stroke({ width: 3, color: 0xffffff, alpha: 0.12 });
+  city.pivot.set(0, WINDOW.y);
+  city.position.set(0, WINDOW.y);
+  city.scale.y = WINDOW_DISPLAY_HEIGHT / WINDOW.height;
   scene.addChild(city, label("BEIJING · CBD", WINDOW.x + 12, WINDOW.y + 10, {
     size: 8,
     color: atmosphere === "day" ? 0x345365 : 0xf4d9ae,
@@ -290,7 +294,7 @@ function drawLighting(scene: Container, atmosphere: OfficeAtmosphere): void {
   const light = new Graphics();
   if (atmosphere === "day") {
     light
-      .moveTo(190, 170).lineTo(780, 170).lineTo(670, 560).lineTo(330, 560).closePath()
+      .moveTo(190, 148).lineTo(780, 148).lineTo(670, 560).lineTo(330, 560).closePath()
       .fill({ color: 0xfff3c7, alpha: 0.045 });
   } else {
     light
@@ -311,7 +315,7 @@ function drawForeground(scene: Container): void {
   for (const point of Object.entries(POSITIONS)
     .filter(([id]) => id.startsWith("desk-"))
     .map(([, point]) => point)) {
-    foreground.roundRect(point.x - 54, point.y - 29, 108, 12, 3).fill(0x76563e);
+    foreground.roundRect(point.x - 54, point.y - 24, 108, 12, 3).fill(0x76563e);
   }
   foreground.roundRect(46, 326, 80, 15, 4).fill(0x76563e);
   foreground.roundRect(188, 510, 145, 14, 3).fill(0x71513d);

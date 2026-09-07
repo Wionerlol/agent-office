@@ -88,7 +88,7 @@ const WALLS: Obstacle[] = [
 const FURNITURE: Obstacle[] = [
   ...Object.entries(POSITIONS)
     .filter(([id]) => id.startsWith("desk-"))
-    .map(([, point]) => ({ x: point.x - 54, y: point.y - 108, width: 108, height: 91 })),
+    .map(([, point]) => ({ x: point.x - 54, y: point.y - 83, width: 108, height: 76 })),
   { x: 834, y: 74, width: 204, height: 34 },
   { x: 188, y: 459, width: 145, height: 65 },
   { x: 400, y: 493, width: 158, height: 42 },
