@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -15,19 +15,17 @@ from backend.observer.codex_usage import CodexUsageMonitor
 from backend.observer.git import GitObserver
 from backend.observer.manager import ObserverManager
 from backend.runtime.office import OfficeRuntime
-from backend.runtime.storage import EventStorage
 from backend.state.engine import StateTransitionError
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or Settings.load()
-    runtime = OfficeRuntime(EventStorage(settings.runtime_path))
+    runtime = OfficeRuntime()
     observer = ObserverManager(runtime, settings.observer)
     usage_monitor = CodexUsageMonitor.from_environment()
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-        await runtime.restore()
         if settings.observer.enabled:
             observer.start()
         yield
@@ -96,16 +94,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         except ValueError as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
 
-    @app.get("/api/history")
-    async def history(
-        agent_id: str | None = None,
-        limit: int = Query(default=1000, ge=1, le=10_000),
-    ) -> list[AgentEvent]:
-        events = await asyncio.to_thread(runtime.storage.read)
-        if agent_id:
-            events = [event for event in events if event.agent_id == agent_id]
-        return events[-limit:]
-
     @app.websocket("/ws")
     async def websocket_endpoint(websocket: WebSocket) -> None:
         await websocket.accept()
@@ -118,8 +106,21 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         queue = runtime.bus.subscribe()
         try:
             while True:
-                message = await queue.get()
-                await websocket.send_json(message)
+                event_task = asyncio.create_task(queue.get())
+                client_task = asyncio.create_task(websocket.receive())
+                done, pending = await asyncio.wait(
+                    {event_task, client_task},
+                    return_when=asyncio.FIRST_COMPLETED,
+                )
+                for task in pending:
+                    task.cancel()
+                await asyncio.gather(*pending, return_exceptions=True)
+                if client_task in done:
+                    client_message = client_task.result()
+                    if client_message["type"] == "websocket.disconnect":
+                        break
+                if event_task in done:
+                    await websocket.send_json(event_task.result())
         except (WebSocketDisconnect, asyncio.CancelledError):
             pass
         finally:

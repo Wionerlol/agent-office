@@ -8,8 +8,7 @@ from pathlib import Path
 from backend.config import Settings
 from backend.models import Agent, AgentEvent, AgentEventType, AgentState
 from backend.observer.git import GitObserver
-from backend.runtime.emitters import FallbackEventEmitter, HttpEventEmitter, JsonlEventEmitter
-from backend.runtime.storage import EventStorage
+from backend.runtime.emitters import HttpEventEmitter
 
 
 def _identifier(name: str) -> str:
@@ -114,7 +113,6 @@ def build_parser(settings: Settings | None = None) -> argparse.ArgumentParser:
     parser.add_argument("--task")
     parser.add_argument("--repo", type=Path, default=Path.cwd())
     parser.add_argument("--server", default=_server_endpoint(settings))
-    parser.add_argument("--events", type=Path)
     return parser
 
 
@@ -122,11 +120,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     settings = load_cli_settings()
     parser = build_parser(settings)
     args, agent_args = parser.parse_known_args(argv)
-    event_path = args.events or settings.runtime_path
-    emitter = FallbackEventEmitter(
-        HttpEventEmitter(args.server),
-        JsonlEventEmitter(EventStorage(event_path)),
-    )
+    emitter = HttpEventEmitter(args.server)
     try:
         exit_code = run_wrapped(
             [args.provider, *agent_args],

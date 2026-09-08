@@ -15,4 +15,4 @@ frontend/dist/
 *.tsbuildinfo
 
 # Runtime-generated data
-runtime/*.jsonl
+**/runtime/*.jsonl

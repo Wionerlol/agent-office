@@ -37,17 +37,33 @@ def test_rest_and_websocket_expose_the_same_live_agents(tmp_path: Path) -> None:
             assert snapshot["agents"][0]["id"] == "frontend"
 
 
-def test_history_endpoint_filters_the_append_only_event_log(tmp_path: Path) -> None:
-    app = create_app(Settings.for_project(tmp_path))
-    app.state.runtime.storage.append(
-        AgentEvent(type=AgentEventType.TASK_UPDATED, agent_id="one", payload={"task": "A"})
-    )
-    app.state.runtime.storage.append(
-        AgentEvent(type=AgentEventType.TASK_UPDATED, agent_id="two", payload={"task": "B"})
+def test_app_ignores_stale_runtime_history(tmp_path: Path) -> None:
+    runtime_dir = tmp_path / "runtime"
+    runtime_dir.mkdir()
+    (runtime_dir / "events.jsonl").write_text("not valid json\n", encoding="utf-8")
+
+    with TestClient(create_app(Settings.for_project(tmp_path))) as client:
+        assert client.get("/health").json() == {"status": "ok"}
+
+
+def test_live_events_are_not_persisted_to_disk(tmp_path: Path) -> None:
+    agent = Agent(
+        id="live",
+        name="Live Agent",
+        provider="test",
+        repository=str(tmp_path),
+        status="starting",
     )
 
-    with TestClient(app) as client:
-        response = client.get("/api/history", params={"agent_id": "two"})
+    with TestClient(create_app(Settings.for_project(tmp_path))) as client:
+        response = client.post(
+            "/api/events",
+            json=AgentEvent(
+                type=AgentEventType.AGENT_STARTED,
+                agent_id="live",
+                payload={"agent": agent.model_dump(mode="json")},
+            ).model_dump(mode="json"),
+        )
 
     assert response.status_code == 200
-    assert [event["agent_id"] for event in response.json()] == ["two"]
+    assert not (tmp_path / "runtime" / "events.jsonl").exists()

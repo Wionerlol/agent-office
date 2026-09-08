@@ -1,11 +1,9 @@
 from datetime import UTC, datetime
-from pathlib import Path
 
 import pytest
 
 from backend.models import Agent, AgentEvent, AgentEventType, AgentState
 from backend.runtime.office import OfficeRuntime
-from backend.runtime.storage import EventStorage
 from backend.state.engine import StateTransitionError
 
 
@@ -25,10 +23,8 @@ def make_agent() -> Agent:
 
 
 @pytest.mark.asyncio
-async def test_runtime_projects_events_into_agent_state_and_records_them(
-    tmp_path: Path,
-) -> None:
-    runtime = OfficeRuntime(storage=EventStorage(tmp_path / "events.jsonl"))
+async def test_runtime_projects_events_into_live_agent_state() -> None:
+    runtime = OfficeRuntime()
     started = AgentEvent(
         type=AgentEventType.AGENT_STARTED,
         agent_id="backend",
@@ -49,15 +45,11 @@ async def test_runtime_projects_events_into_agent_state_and_records_them(
         "changes": {"status": "testing"},
     }
     assert runtime.registry.get("backend").status is AgentState.TESTING
-    assert [event.type for event in runtime.storage.read()] == [
-        AgentEventType.AGENT_STARTED,
-        AgentEventType.STATE_CHANGED,
-    ]
 
 
 @pytest.mark.asyncio
-async def test_runtime_rejects_a_stale_state_transition(tmp_path: Path) -> None:
-    runtime = OfficeRuntime(storage=EventStorage(tmp_path / "events.jsonl"))
+async def test_runtime_rejects_a_stale_state_transition() -> None:
+    runtime = OfficeRuntime()
     await runtime.apply(
         AgentEvent(
             type=AgentEventType.AGENT_STARTED,

@@ -20,17 +20,23 @@ class GenericProcessAdapter(AgentAdapter):
         provider: str | None = None,
         scan_interval: float = 1.0,
     ) -> None:
-        self.processes = ProcessObserver(pids)
         self.command_names = command_names if command_names is not None else KNOWN_PROVIDERS
+        command_hints = (
+            None
+            if pids is not None or not self.command_names
+            else {*self.command_names, "office-run"}
+        )
+        self.processes = ProcessObserver(pids, command_hints=command_hints)
         self.provider = provider
         self.scan_interval = scan_interval
 
     async def detect(self) -> list[Agent]:
-        agents: list[Agent] = []
+        detected: list[tuple[ProcessSnapshot, Agent]] = []
         for process in await asyncio.to_thread(self.processes.snapshots):
             if agent := self._to_agent(process):
-                agents.append(agent)
-        return agents
+                detected.append((process, agent))
+        parent_pids = {process.parent_pid for process, _ in detected}
+        return [agent for process, agent in detected if process.pid not in parent_pids]
 
     async def observe(self, agent: Agent) -> AsyncIterator[AgentEvent]:
         if agent.pid is None:
@@ -55,6 +61,8 @@ class GenericProcessAdapter(AgentAdapter):
             or executable
         )
         explicit = environment.get("AGENT_OFFICE_ID")
+        if not explicit and ("app-server" in process.command or "office-run" in command_names):
+            return None
         if not explicit and matched is None:
             return None
         if self.provider and provider != self.provider and matched is None:

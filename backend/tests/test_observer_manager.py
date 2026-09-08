@@ -9,7 +9,6 @@ from backend.adapters.generic import GenericProcessAdapter
 from backend.config import ObserverSettings
 from backend.observer.manager import ObserverManager
 from backend.runtime.office import OfficeRuntime
-from backend.runtime.storage import EventStorage
 
 
 @pytest.mark.asyncio
@@ -25,7 +24,7 @@ async def test_manager_tracks_detected_process_until_it_exits(tmp_path: Path) ->
         [sys.executable, "-c", "import time; time.sleep(10)"],
         env=environment,
     )
-    runtime = OfficeRuntime(EventStorage(tmp_path / "events.jsonl"))
+    runtime = OfficeRuntime()
     manager = ObserverManager(
         runtime,
         ObserverSettings(enabled=True, scan_interval=0.01),

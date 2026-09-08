@@ -13,8 +13,8 @@ class ProjectSettings(BaseModel):
 class ObserverSettings(BaseModel):
     enabled: bool = True
     idle_timeout: float = 30.0
-    scan_interval: float = 1.0
-    tool_scan_interval: float = Field(default=0.1, gt=0)
+    scan_interval: float = 2.0
+    tool_scan_interval: float = Field(default=0.25, gt=0)
 
 
 class ServerSettings(BaseModel):
@@ -37,7 +37,6 @@ class Settings(BaseModel):
     server: ServerSettings = Field(default_factory=ServerSettings)
     office: OfficeSettings = Field(default_factory=OfficeSettings)
     frontend: FrontendSettings = Field(default_factory=FrontendSettings)
-    runtime_path: Path = Path("runtime/events.jsonl")
 
     @classmethod
     def load_default(cls) -> "Settings":
@@ -58,8 +57,6 @@ class Settings(BaseModel):
         for project in settings.projects:
             if not project.path.is_absolute():
                 project.path = (config_path.parent.parent / project.path).resolve()
-        if not settings.runtime_path.is_absolute():
-            settings.runtime_path = (config_path.parent.parent / settings.runtime_path).resolve()
         return settings
 
     @classmethod
@@ -69,5 +66,4 @@ class Settings(BaseModel):
             project=ProjectSettings(name=path.name, path=path),
             projects=[ProjectSettings(name=path.name, path=path)],
             observer=ObserverSettings(enabled=False),
-            runtime_path=path / "runtime" / "events.jsonl",
         )

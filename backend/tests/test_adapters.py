@@ -5,8 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from backend.adapters.generic import GenericProcessAdapter
+from backend.adapters.generic import CustomAgentAdapter, GenericProcessAdapter
 from backend.models import AgentState
+from backend.observer.process import ProcessSnapshot
 from backend.observer.tools import state_for_command, tool_kind
 
 
@@ -37,6 +38,48 @@ async def test_generic_adapter_detects_an_explicitly_tagged_process(tmp_path: Pa
         "provider": "custom",
         "repository": str(tmp_path),
     }
+
+
+@pytest.mark.asyncio
+async def test_custom_adapter_discovers_a_directly_started_tagged_process(
+    tmp_path: Path,
+) -> None:
+    environment = {
+        **os.environ,
+        "AGENT_OFFICE_ID": "direct-custom",
+        "AGENT_OFFICE_PROVIDER": "custom",
+        "AGENT_OFFICE_REPOSITORY": str(tmp_path),
+    }
+    process = subprocess.Popen(
+        [sys.executable, "-c", "import time; time.sleep(10)"],
+        env=environment,
+    )
+    try:
+        agents = await CustomAgentAdapter().detect()
+    finally:
+        process.terminate()
+        process.wait(timeout=5)
+
+    assert any(agent.id == "direct-custom" for agent in agents)
+
+
+@pytest.mark.asyncio
+async def test_generic_adapter_keeps_a_node_provider_launcher() -> None:
+    adapter = GenericProcessAdapter()
+    adapter.processes.snapshots = lambda: [
+        ProcessSnapshot(
+            pid=42,
+            parent_pid=1,
+            command=["node", "/usr/local/bin/claude"],
+            cwd="/repo",
+            created_at=0,
+            environment={},
+        )
+    ]
+
+    agents = await adapter.detect()
+
+    assert [(agent.provider, agent.pid) for agent in agents] == [("claude", 42)]
 
 
 @pytest.mark.parametrize(

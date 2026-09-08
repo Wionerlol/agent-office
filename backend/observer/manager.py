@@ -7,8 +7,6 @@ from backend.adapters.base import AgentAdapter
 from backend.adapters.generic import GenericProcessAdapter
 from backend.config import ObserverSettings
 from backend.models import Agent, AgentEvent, AgentEventType, AgentState
-from backend.observer.filesystem import FileSystemObserver
-from backend.observer.git import GitObserver
 from backend.observer.tools import ToolObserver
 from backend.runtime.office import OfficeRuntime
 
@@ -28,7 +26,6 @@ class ObserverManager:
         self.settings = settings
         self.adapters = adapters or [GenericProcessAdapter(scan_interval=settings.scan_interval)]
         self._managed_ids: set[str] = set()
-        self._filesystems: dict[str, FileSystemObserver] = {}
         self._tool_observer = ToolObserver()
         self._observation_tasks: dict[str, asyncio.Task[None]] = {}
         self._tool_tasks: dict[str, asyncio.Task[None]] = {}
@@ -84,8 +81,6 @@ class ObserverManager:
                 logger.info("agent stopped", extra={"agent_id": agent_id})
             except KeyError:
                 pass
-            if filesystem := self._filesystems.pop(agent_id, None):
-                await asyncio.to_thread(filesystem.close)
             self._tool_observer.forget(agent_id)
             if task := self._observation_tasks.pop(agent_id, None):
                 task.cancel()
@@ -97,45 +92,14 @@ class ObserverManager:
         self._managed_ids = set(detected)
         for agent in detected.values():
             try:
-                await self._observe_repository(agent)
                 await self._mark_idle(agent.id)
             except Exception:
                 logger.exception("observer failed", extra={"agent_id": agent.id})
 
-    async def _observe_repository(self, agent: Agent) -> None:
-        git = await asyncio.to_thread(GitObserver(agent.repository).snapshot)
-        current = self.runtime.registry.get(agent.id)
-        facts: dict[str, object] = {}
-        if current.branch != git.branch:
-            facts["branch"] = git.branch
-        if current.worktree != git.worktree:
-            facts["worktree"] = git.worktree
-        if facts:
-            self.runtime.registry.update(agent.id, **facts)
-            await self.runtime.bus.publish(
-                {"type": "agent.updated", "agent_id": agent.id, "changes": facts}
-            )
-
-        filesystem = self._filesystems.setdefault(
-            agent.id, FileSystemObserver(agent.repository)
-        )
-        events = await asyncio.to_thread(filesystem.scan, agent.id)
-        for event in events:
-            await self.runtime.apply(event)
-            current = self.runtime.registry.get(agent.id)
-            if current.status not in {AgentState.TESTING, AgentState.TOOL_RUNNING}:
-                await self.runtime.apply(
-                    AgentEvent(
-                        type=AgentEventType.STATE_CHANGED,
-                        agent_id=agent.id,
-                        payload={"from": current.status, "to": AgentState.CODING},
-                    )
-                )
-
     async def _observe_tools(self, agent: Agent) -> None:
         if agent.pid is None:
             return
-        interval = min(self.settings.tool_scan_interval, self.settings.scan_interval)
+        interval = self.settings.tool_scan_interval
         while not self._stopped.is_set():
             try:
                 events = await asyncio.to_thread(
@@ -197,9 +161,6 @@ class ObserverManager:
         self._stopped.set()
         if self._task:
             await self._task
-        await asyncio.gather(
-            *(asyncio.to_thread(observer.close) for observer in self._filesystems.values())
-        )
         for task in self._observation_tasks.values():
             task.cancel()
         for task in self._tool_tasks.values():

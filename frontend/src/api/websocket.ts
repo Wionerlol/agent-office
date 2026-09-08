@@ -9,7 +9,6 @@ type ServerMessage =
 
 export function applyServerMessage(message: ServerMessage): void {
   const store = useAgentStore.getState();
-  if (store.replayMode) return;
   if (message.type === "snapshot") {
     store.replaceAgents(message.agents);
     return;

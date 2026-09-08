@@ -27,8 +27,6 @@ export function AgentPanel({ agent, events, onClose }: AgentPanelProps) {
         <dt>Started</dt><dd>{new Date(agent.started_at).toLocaleString()}</dd>
         <dt>Last active</dt><dd>{new Date(agent.last_active_at).toLocaleString()}</dd>
       </dl>
-      <h3>Changed files</h3>
-      {agent.changed_files.length ? <ul>{agent.changed_files.map((file) => <li key={file}>{file}</li>)}</ul> : <p className="muted">No changes observed.</p>}
       <h3>Recent events</h3>
       {agentEvents.length ? <ul>{agentEvents.map((event) => <li key={`${event.timestamp}-${event.type}`}>{event.type}</li>)}</ul> : <p className="muted">No events yet.</p>}
     </aside>

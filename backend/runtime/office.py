@@ -1,11 +1,9 @@
-import asyncio
 from typing import Any
 
 from backend.models import Agent, AgentEvent, AgentEventType, AgentState
 from backend.observer.tools import state_for_command
 from backend.runtime.bus import EventBus
-from backend.runtime.storage import EventStorage
-from backend.state.engine import AgentStateEngine, StateTransitionError
+from backend.state.engine import AgentStateEngine
 from backend.state.registry import AgentRegistry
 
 
@@ -14,17 +12,15 @@ class OfficeRuntime:
 
     def __init__(
         self,
-        storage: EventStorage,
         registry: AgentRegistry | None = None,
         bus: EventBus | None = None,
         state_engine: AgentStateEngine | None = None,
     ) -> None:
-        self.storage = storage
         self.registry = registry or AgentRegistry()
         self.bus = bus or EventBus()
         self.state_engine = state_engine or AgentStateEngine()
 
-    async def apply(self, event: AgentEvent, *, record: bool = True) -> dict[str, Any]:
+    async def apply(self, event: AgentEvent) -> dict[str, Any]:
         if event.type is AgentEventType.AGENT_STARTED:
             agent = Agent.model_validate(event.payload["agent"])
             self.registry.add(agent)
@@ -38,8 +34,6 @@ class OfficeRuntime:
         else:
             message = self._apply_update(event)
 
-        if record:
-            await asyncio.to_thread(self.storage.append, event)
         await self.bus.publish(message)
         return message
 
@@ -84,11 +78,3 @@ class OfficeRuntime:
         if event.type is AgentEventType.STATE_CHANGED:
             serialized = {"status": updated.status.value}
         return {"type": "agent.updated", "agent_id": event.agent_id, "changes": serialized}
-
-    async def restore(self) -> None:
-        events = await asyncio.to_thread(self.storage.read)
-        for event in events:
-            try:
-                await self.apply(event, record=False)
-            except (KeyError, StateTransitionError):
-                continue

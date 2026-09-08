@@ -67,7 +67,7 @@
       <header id="overview">
         <div class="kicker">Local agent observability · v0.1.0</div>
         <h1>Agent Office<br>使用手册</h1>
-        <p class="lead">把本地 Codex、Claude、OpenCode 或自定义进程的活动转换为统一事件，再用实时 2D 办公室展示谁在编码、测试、搜索、等待或报错。</p>
+        <p class="lead">用实时 2D 办公室展示本地 Codex、Claude、OpenCode 或自定义进程的当前状态，并通过用量指示器和窗外光线呈现 Codex 剩余额度。</p>
         <div class="badges"><span class="badge">Python 3.13+</span><span class="badge">FastAPI</span><span class="badge">React + TypeScript</span><span class="badge">PixiJS</span><span class="badge">本地优先</span></div>
       </header>
 
@@ -114,18 +114,17 @@ npm run dev</code></pre>
         <pre><code>uv run office-run claude --name Reviewer --repo /path/to/repo --dangerously-skip-permissions
 uv run office-run opencode --name UI-Agent --role Frontend
 uv run office-run my-agent --name Custom --server http://127.0.0.1:8000/api/events</code></pre>
-        <p>若服务暂时不可达，Wrapper 会把事件回退写入 <code>runtime/events.jsonl</code>；下次服务启动时会恢复该历史。</p>
+        <p>Wrapper 只发送实时事件，不写本地历史。服务暂时不可达时事件会被丢弃，但不会阻止 Agent 进程继续运行。</p>
       </section>
 
       <section id="interface">
         <h2>界面操作</h2>
         <ul>
           <li><strong>办公室：</strong>角色沿 A* 路径移动到当前状态对应区域；点击角色打开详情。</li>
-          <li><strong>详情面板：</strong>查看 Provider、角色、个性、任务、PID、分支、worktree、工具、改动文件和最近事件。</li>
+          <li><strong>详情面板：</strong>查看 Provider、角色、个性、任务、PID、分支、worktree、当前工具和最近事件。</li>
           <li><strong>Project：</strong>配置多个仓库后，选择单个仓库或查看全部；worktree Agent 会跟随对应项目筛选。</li>
-          <li><strong>Replay history：</strong>加载 JSONL 历史，支持暂停、继续和 1×/2×/5×速度；点 <em>Live</em> 返回实时快照。</li>
-          <li><strong>Debug controls：</strong>生成/删除 Agent、随机化状态、制造错误和重置。在线模式通过后端事件执行，模拟模式只修改本地状态。</li>
-          <li><strong>连接状态：</strong><code>connected</code>、<code>reconnecting</code>、<code>disconnected</code>、<code>simulation</code> 或 <code>replay</code>。</li>
+          <li><strong>Codex 用量：</strong>显示短周期与周周期剩余额度；办公室窗景会随剩余额度在白天、傍晚和深夜之间变化。</li>
+          <li><strong>连接状态：</strong><code>connected</code>、<code>reconnecting</code>、<code>disconnected</code> 或 <code>simulation</code>。</li>
         </ul>
       </section>
 
@@ -155,16 +154,15 @@ projects:
 observer:
   enabled: true
   idle_timeout: 30
-  scan_interval: 1
-  tool_scan_interval: 0.1
+  scan_interval: 2
+  tool_scan_interval: 0.25
 server:
   host: 127.0.0.1
   port: 8000
 office:
   desks: 8
 frontend:
-  port: 5173
-runtime_path: runtime/events.jsonl</code></pre>
+  port: 5173</code></pre>
         <p>用 <code>AGENT_OFFICE_CONFIG</code> 指向其他配置，用 <code>AGENT_OFFICE_LOG_LEVEL=DEBUG</code> 开启详细日志。</p>
         <div class="callout warning"><strong>安全提示：</strong>接口没有身份认证。默认只绑定 <code>127.0.0.1</code>；除非已放在受保护的反向代理之后，否则不要暴露到公网。</div>
       </section>
@@ -174,7 +172,7 @@ runtime_path: runtime/events.jsonl</code></pre>
         <table><thead><tr><th>接口</th><th>说明</th></tr></thead><tbody>
           <tr><td><code>GET /health</code></td><td>服务健康状态</td></tr><tr><td><code>GET /api/agents</code></td><td>当前活动 Agent</td></tr>
           <tr><td><code>GET /api/agents/{id}</code></td><td>完整 Agent 详情</td></tr><tr><td><code>GET /api/project</code></td><td>当前项目与分支</td></tr>
-          <tr><td><code>GET /api/projects</code></td><td>已配置项目列表</td></tr><tr><td><code>GET /api/history</code></td><td>历史事件；支持 <code>agent_id</code> 和 <code>limit</code></td></tr>
+          <tr><td><code>GET /api/projects</code></td><td>已配置项目列表</td></tr><tr><td><code>GET /api/codex-usage</code></td><td>Codex 短周期与周周期剩余额度</td></tr>
           <tr><td><code>GET /api/config</code></td><td>前端可安全读取的办公室配置</td></tr>
           <tr><td><code>POST /api/events</code></td><td>提交标准 <code>AgentEvent</code></td></tr><tr><td><code>WS /ws</code></td><td>首次快照与后续增量</td></tr>
         </tbody></table>
@@ -192,12 +190,12 @@ runtime_path: runtime/events.jsonl</code></pre>
 
       <section id="architecture">
         <h2>架构</h2>
-        <div class="flow"><span>Process / Git / FS / Wrapper</span><i>→</i><span>Provider Adapter</span><i>→</i><span>AgentEvent</span><i>→</i><span>OfficeRuntime</span><i>→</i><span>REST / WebSocket / JSONL</span><i>→</i><span>React + PixiJS</span></div>
+        <div class="flow"><span>Process / Wrapper</span><i>→</i><span>Provider Adapter</span><i>→</i><span>AgentEvent</span><i>→</i><span>OfficeRuntime</span><i>→</i><span>REST / WebSocket</span><i>→</i><span>React + PixiJS</span></div>
         <p><code>OfficeRuntime.apply(event)</code> 是状态变更的唯一入口。前端不判断 Codex 或 Claude 的私有行为，只理解 <code>Agent</code>、<code>AgentState</code> 和 <code>AgentEvent</code>。</p>
         <table><thead><tr><th>版本</th><th>交付能力</th></tr></thead><tbody>
           <tr><td>V0</td><td>2D 模拟办公室、详情、调试、模拟事件</td></tr><tr><td>V1</td><td>状态引擎、注册表、REST、WebSocket</td></tr>
-          <tr><td>V2</td><td>进程、Git、文件系统观察</td></tr><tr><td>V3</td><td><code>office-run</code> 与真实 Agent 生命周期</td></tr>
-          <tr><td>V4</td><td>测试、搜索和通用工具状态识别</td></tr><tr><td>V5</td><td>JSONL 历史回放</td></tr>
+          <tr><td>V2</td><td>进程与子工具观察</td></tr><tr><td>V3</td><td><code>office-run</code> 与真实 Agent 生命周期</td></tr>
+          <tr><td>V4</td><td>测试、搜索和通用工具状态识别</td></tr><tr><td>V5</td><td>轻量内存实时状态</td></tr>
           <tr><td>V6</td><td>多 Agent、Provider、仓库与 worktree</td></tr><tr><td>V7</td><td>A*、昼夜氛围、装饰、个性和成就</td></tr>
         </tbody></table>
       </section>
@@ -213,7 +211,7 @@ cd frontend
 npm test
 npm run lint
 npm run build</code></pre>
-        <p>后端测试覆盖状态投影、事件存储、REST/WS、历史、Git/文件系统、真实子进程 Adapter、观察器管理和 Wrapper 生命周期。前端测试覆盖 Store、WebSocket 归一化、回放、项目/worktree 筛选、状态视觉映射和 A*。</p>
+        <p>后端测试覆盖状态投影、REST/WS、Codex 用量、Git、真实子进程 Adapter、观察器管理和 Wrapper 生命周期。前端测试覆盖 Store、WebSocket 归一化、用量显示、项目/worktree 筛选、状态视觉映射和 A*。</p>
       </section>
 
       <section id="troubleshooting">
@@ -221,7 +219,7 @@ npm run build</code></pre>
         <details><summary>页面显示 disconnected 或 reconnecting</summary><p>确认后端位于 8000 端口，检查 <code>curl http://127.0.0.1:8000/health</code>。开发模式还需确认 Vite 代理配置未改变。</p></details>
         <details><summary>办公室没有出现 Agent</summary><p>用 <code>office-run</code> 启动进程，或确认进程名是 Codex/Claude/OpenCode。若正在筛选 Project，检查 Agent 的 repository/worktree 是否匹配。</p></details>
         <details><summary>Agent 很快进入 idle</summary><p>提高 <code>observer.idle_timeout</code>；任何标准事件或文件改动都会刷新最后活动时间。</p></details>
-        <details><summary>历史回放为空</summary><p>检查 <code>runtime_path</code> 和 JSONL 文件权限。通过 HTTP 成功提交或 Wrapper 回退写入的事件都会出现在这里。</p></details>
+        <details><summary>Codex 用量显示 unavailable</summary><p>先在本机运行一次 Codex，确认 <code>~/.codex/sessions</code> 中存在包含 rate limit 信息的会话。页面约每 30 秒刷新一次。</p></details>
         <details><summary>修改前端后首页未更新</summary><p>生产式启动读取 <code>frontend/dist</code>；重新运行 <code>cd frontend &amp;&amp; npm run build</code>，或使用 Vite 开发服务器。</p></details>
       </section>
       <footer>Agent Office 使用手册 · 与仓库 v0.1.0 同步 · 可直接打印为 PDF 或离线保存。</footer>
