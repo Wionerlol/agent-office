@@ -99,10 +99,7 @@ def _server_endpoint(settings: Settings) -> str:
 
 
 def load_cli_settings() -> Settings:
-    if configured_path := os.getenv("AGENT_OFFICE_CONFIG"):
-        return Settings.load(configured_path)
-    source_config = Path(__file__).resolve().parents[1] / "config" / "office.yaml"
-    return Settings.load(source_config if source_config.exists() else "config/office.yaml")
+    return Settings.load_default()
 
 
 def build_parser(settings: Settings | None = None) -> argparse.ArgumentParser:

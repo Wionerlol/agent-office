@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import yaml
@@ -37,6 +38,13 @@ class Settings(BaseModel):
     office: OfficeSettings = Field(default_factory=OfficeSettings)
     frontend: FrontendSettings = Field(default_factory=FrontendSettings)
     runtime_path: Path = Path("runtime/events.jsonl")
+
+    @classmethod
+    def load_default(cls) -> "Settings":
+        if configured_path := os.getenv("AGENT_OFFICE_CONFIG"):
+            return cls.load(configured_path)
+        source_config = Path(__file__).resolve().parents[1] / "config" / "office.yaml"
+        return cls.load(source_config if source_config.exists() else "config/office.yaml")
 
     @classmethod
     def load(cls, path: Path | str = "config/office.yaml") -> "Settings":

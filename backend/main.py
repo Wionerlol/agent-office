@@ -11,7 +11,7 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s %(message)s",
 )
 
-settings = Settings.load(os.getenv("AGENT_OFFICE_CONFIG", "config/office.yaml"))
+settings = Settings.load_default()
 app = create_app(settings)
 
 
