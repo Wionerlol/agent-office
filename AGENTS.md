@@ -1,3 +1,35 @@
+# Codex Entry Point
+
+Before implementing the current state-fidelity phase, read these files in order:
+
+1. `docs/VISION.md`
+2. `docs/DECISIONS.md`
+3. `docs/SPEC.md`
+4. `docs/EXAMPLES.md`
+5. `docs/ACCEPTANCE.md`
+6. `docs/CONTEXT.md`
+7. `docs/IMPLEMENTATION_PLAN.md`
+
+Resolve conflicts using this priority:
+
+1. the user's latest explicit decision;
+2. `docs/DECISIONS.md`;
+3. `docs/VISION.md`;
+4. `docs/SPEC.md`;
+5. implementation convenience.
+
+Do not treat the older `agent-office-PROJECT.md` as authoritative when it conflicts with the files above. It remains useful historical context.
+
+Implementation principles for this phase:
+- preserve the current frontend architecture unless a backend change requires a minimal diagnostic change;
+- keep normalized domain logic provider-agnostic;
+- prefer explicit runtime facts over heuristics;
+- keep source precedence centralized and testable;
+- preserve backward compatibility for existing API/WebSocket callers;
+- do not broaden scope into visual redesign or a general event-sourcing platform;
+- update `docs/DECISIONS.md` when you make a non-trivial implementation choice that is not already decided;
+- do not declare completion until the acceptance criteria and verification commands pass.
+
 # Repository Guidelines
 
 ## Project Structure & Module Organization
