@@ -18,6 +18,10 @@ Run a real agent through the wrapper:
 uv run office-run codex --name Backend --role Backend --task "Implement API"
 ```
 
+## DevRouter integration
+
+When `office-run` is installed on PATH, DevRouter automatically uses it to wrap the Codex process inside each new project session. Start the shared Agent Office server, then run `devrouter` in the target repository; do not nest it as `office-run devrouter`. Use `devrouter --office` to require monitoring or `devrouter --no-office` to start Codex directly.
+
 See the complete [HTML user guide](docs/agent-office-user-guide.html), also available at <http://127.0.0.1:8000/guide> while the server is running.
 
 ## Verification

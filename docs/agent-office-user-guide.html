@@ -115,6 +115,7 @@ npm run dev</code></pre>
 uv run office-run opencode --name UI-Agent --role Frontend
 uv run office-run my-agent --name Custom --server http://127.0.0.1:8000/api/events</code></pre>
         <p>Wrapper 只发送实时事件，不写本地历史。服务暂时不可达时事件会被丢弃，但不会阻止 Agent 进程继续运行。</p>
+        <div class="callout"><strong>DevRouter：</strong>若 <code>office-run</code> 已安装到 PATH，新建 DevRouter session 会自动用它包装内部 Codex。保持 Agent Office 服务运行后，在目标仓库直接执行 <code>devrouter</code>；不要执行 <code>office-run devrouter</code>。可用 <code>devrouter --office</code> 强制启用，或用 <code>devrouter --no-office</code> 禁用。</div>
       </section>
 
       <section id="interface">
