@@ -6,7 +6,7 @@ from pathlib import Path
 import psutil
 
 from backend.adapters.base import AgentAdapter
-from backend.models import Agent, AgentEvent, AgentEventType, AgentState
+from backend.models import Agent, AgentEvent, AgentEventType, AgentState, EventSource
 from backend.observer.process import ProcessObserver, ProcessSnapshot
 
 KNOWN_PROVIDERS = frozenset({"codex", "claude", "opencode"})
@@ -36,7 +36,16 @@ class GenericProcessAdapter(AgentAdapter):
             if agent := self._to_agent(process):
                 detected.append((process, agent))
         parent_pids = {process.parent_pid for process, _ in detected}
-        return [agent for process, agent in detected if process.pid not in parent_pids]
+        # Wrapped descendants inherit the same ID. Observe their oldest/root process,
+        # not a nested tool that may exit while the wrapped agent is still alive.
+        explicit: dict[str, Agent] = {}
+        fallback: list[Agent] = []
+        for process, agent in sorted(detected, key=lambda item: (item[0].created_at, item[0].pid)):
+            if process.environment.get("AGENT_OFFICE_ID"):
+                explicit.setdefault(agent.id, agent)
+            elif process.pid not in parent_pids:
+                fallback.append(agent)
+        return [*explicit.values(), *fallback]
 
     async def observe(self, agent: Agent) -> AsyncIterator[AgentEvent]:
         if agent.pid is None:
@@ -47,7 +56,12 @@ class GenericProcessAdapter(AgentAdapter):
                 await asyncio.wait_for(never.wait(), timeout=self.scan_interval)
             except TimeoutError:
                 continue
-        yield AgentEvent(type=AgentEventType.AGENT_STOPPED, agent_id=agent.id)
+        yield AgentEvent(
+            type=AgentEventType.AGENT_STOPPED,
+            agent_id=agent.id,
+            source=EventSource.PROCESS,
+            payload={"pid": agent.pid},
+        )
 
     def _to_agent(self, process: ProcessSnapshot) -> Agent | None:
         environment = process.environment
@@ -55,10 +69,7 @@ class GenericProcessAdapter(AgentAdapter):
         command_names = {Path(part).name.lower() for part in process.command}
         matched = next((name for name in self.command_names if name in command_names), None)
         provider = (
-            environment.get("AGENT_OFFICE_PROVIDER")
-            or self.provider
-            or matched
-            or executable
+            environment.get("AGENT_OFFICE_PROVIDER") or self.provider or matched or executable
         )
         explicit = environment.get("AGENT_OFFICE_ID")
         if not explicit and ("app-server" in process.command or "office-run" in command_names):
