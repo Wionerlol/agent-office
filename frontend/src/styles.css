@@ -40,6 +40,7 @@ h3 { margin: 1.4rem 0 .5rem; font-size: .88rem; text-transform: uppercase; lette
 .status-pill { display: inline-block; border-radius: 999px; padding: .3rem .58rem; background: #647b78; color: white; font: .7rem monospace; text-transform: uppercase; }
 .status-error { background: #b4504d; }.status-done { background: #478154; }.status-testing { background: #587653; }
 dl { display: grid; grid-template-columns: 86px minmax(0, 1fr); gap: .55rem; margin: 1.2rem 0; font-size: .84rem; }
+.agent-panel dl { grid-template-columns: 108px minmax(0, 1fr); }
 dt { color: #6a7471; } dd { margin: 0; font-family: monospace; }
 ul { padding-left: 1.1rem; margin: .4rem 0; font: .78rem/1.55 monospace; }
 .muted { color: #717b78; font-size: .82rem; }

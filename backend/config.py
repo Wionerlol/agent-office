@@ -2,10 +2,23 @@ import os
 from pathlib import Path
 
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from backend.models import AgentDefinition
 
 
-class ProjectSettings(BaseModel):
+class AgentDefinitionsSettings(BaseModel):
+    agents: list[AgentDefinition] = Field(default_factory=list)
+
+    @field_validator("agents")
+    @classmethod
+    def unique_definitions(cls, value: list[AgentDefinition]) -> list[AgentDefinition]:
+        if len({definition.id for definition in value}) != len(value):
+            raise ValueError("Agent definition IDs must be unique within a project")
+        return value
+
+
+class ProjectSettings(AgentDefinitionsSettings):
     name: str = "agent-office"
     path: Path = Field(default_factory=Path.cwd)
 
@@ -30,7 +43,7 @@ class FrontendSettings(BaseModel):
     port: int = 5173
 
 
-class Settings(BaseModel):
+class Settings(AgentDefinitionsSettings):
     project: ProjectSettings = Field(default_factory=ProjectSettings)
     projects: list[ProjectSettings] = Field(default_factory=list)
     observer: ObserverSettings = Field(default_factory=ObserverSettings)

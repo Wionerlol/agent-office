@@ -136,3 +136,58 @@ async def test_unwrapped_supported_agent_remains_discoverable() -> None:
     ]
     agents = await adapter.detect()
     assert [(agent.id, agent.pid) for agent in agents] == [("codex-11", 11)]
+
+
+@pytest.mark.asyncio
+async def test_passive_discovery_decodes_semantic_environment_without_resolving_role() -> None:
+    adapter = GenericProcessAdapter()
+    adapter.processes.snapshots = lambda: [
+        ProcessSnapshot(
+            11,
+            1,
+            ["codex"],
+            "/repo",
+            1,
+            {
+                "AGENT_OFFICE_ID": "child",
+                "AGENT_OFFICE_PARENT_ID": "lead",
+                "AGENT_OFFICE_DEFINITION_ID": "tester",
+                "AGENT_OFFICE_ROLE": "backend",
+                "AGENT_OFFICE_RESPONSIBILITIES": '["Own API"]',
+            },
+        ),
+    ]
+    (agent,) = await adapter.detect()
+    assert agent.parent_agent_id == "lead"
+    assert agent.definition_id == "tester"
+    assert agent.role == "backend"
+    assert agent.responsibilities == ["Own API"]
+    assert agent.metadata["wrapped"] is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("raw", ["bad json", "{}", "[123]"])
+async def test_malformed_responsibilities_do_not_break_passive_discovery(raw: str) -> None:
+    adapter = GenericProcessAdapter()
+    adapter.processes.snapshots = lambda: [
+        ProcessSnapshot(11, 1, ["codex"], "/repo", 1, {"AGENT_OFFICE_RESPONSIBILITIES": raw}),
+    ]
+    (agent,) = await adapter.detect()
+    assert agent.responsibilities == []
+
+
+@pytest.mark.asyncio
+async def test_one_invalid_parent_relationship_does_not_hide_other_processes() -> None:
+    adapter = GenericProcessAdapter()
+    adapter.processes.snapshots = lambda: [
+        ProcessSnapshot(
+            11,
+            1,
+            ["codex"],
+            "/repo",
+            1,
+            {"AGENT_OFFICE_ID": "invalid", "AGENT_OFFICE_PARENT_ID": "invalid"},
+        ),
+        ProcessSnapshot(12, 1, ["codex"], "/repo", 2, {"AGENT_OFFICE_ID": "valid"}),
+    ]
+    assert [agent.id for agent in await adapter.detect()] == ["valid"]

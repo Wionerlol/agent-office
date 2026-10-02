@@ -25,6 +25,13 @@ class AgentState(StrEnum):
     OFFLINE = "offline"
 
 
+class AgentDefinition(BaseModel):
+    id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    role: str | None = None
+    responsibilities: list[str] = Field(default_factory=list)
+
+
 class Agent(BaseModel):
     id: str
     name: str
@@ -36,11 +43,20 @@ class Agent(BaseModel):
     status: AgentState = AgentState.STARTING
     task: str | None = None
     role: str | None = None
+    responsibilities: list[str] = Field(default_factory=list)
+    parent_agent_id: str | None = None
+    definition_id: str | None = None
     current_tool: str | None = None
     changed_files: list[str] = Field(default_factory=list)
     started_at: datetime = Field(default_factory=utc_now)
     last_active_at: datetime = Field(default_factory=utc_now)
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def validate_parent(self) -> Self:
+        if self.parent_agent_id == self.id:
+            raise ValueError("An agent cannot be its own parent")
+        return self
 
     @model_validator(mode="after")
     def add_default_personality(self) -> Self:

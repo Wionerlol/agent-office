@@ -49,9 +49,9 @@ Agent Office server
 
 DevRouter should be run directly when integrated with Agent Office. Do not wrap DevRouter itself in office-run.
 
-## Existing weakness
+## Historical State Fidelity weakness (resolved)
 
-The backend currently combines several evidence sources without explicit authority.
+Before State Fidelity, the backend combined several evidence sources without explicit authority.
 
 Examples:
 - office-run marks starting/thinking/done/error;
@@ -59,7 +59,7 @@ Examples:
 - ToolObserver infers testing/searching/tool_running from child commands;
 - ObserverManager derives idle from inactivity.
 
-These sources can describe the same agent but do not currently carry explicit provenance into the runtime.
+That phase introduced typed EventSource, centralized source precedence, internal status/registration evidence, lifecycle PID guards, and concurrent tool handling. Decisions 1–10 record the implemented contract.
 
 ## Important implementation restraint
 
@@ -69,13 +69,14 @@ Do not convert the project into a complex event-sourcing platform.
 
 The goal is a small, understandable arbitration layer suitable for a local developer tool.
 
-## Open questions
+## Current Semantic Agent Model phase
 
-These do not block implementation.
+Runtime activity is already trustworthy. The remaining gap is stable semantic identity: provider/process names do not explain responsibilities or subagent ownership.
 
-1. Whether API/manual events should have a dedicated precedence between wrapper and tool_process or remain a neutral compatibility source.
-2. Whether status provenance belongs in first-class Agent fields or internal metadata.
-3. Whether filesystem-derived CODING should ship in this phase or immediately follow it.
-4. Whether future native Codex events will arrive through office-run, another adapter, or a dedicated integration.
+AgentDefinitionRegistry loads repository-scoped definitions from the existing server YAML. SemanticIdentityResolver enriches registration centrally and keeps identity evidence separate from activity evidence. GenericProcessAdapter transports optional environment metadata; office-run supplies explicit flags/environment. Native/orchestrator integrations can post normalized Agent fields with source=native. No provider-specific native subagent adapter is added in this phase.
 
-Choose the simplest design that preserves future extensibility and document any choice made.
+Frontend labels already consume agent.name. AgentPanel adds responsibilities, parent ID, and separate current task/state/tool. The existing state-to-destination interface is unchanged and can coexist with a future role-to-home-zone mapping.
+
+Project definitions are static until the server reloads. Parent references may point to an unobserved/exited agent and are informational; there is no inferred hierarchy or cascade cleanup. Role strings stay free-form for compatibility. No task/prompt inference or filesystem observer is implemented.
+
+Future work may include provider-specific native subagent normalization, explicit semantic edit/clear operations, definition hot reload, or role-based home zones. These are outside the current completion criteria.

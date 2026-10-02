@@ -1,5 +1,17 @@
 # Codex Implementation Plan
 
+## Current phase: Semantic Agent Model
+
+1. Extend Agent with safe semantic fields and introduce AgentDefinition.
+2. Load project-scoped definitions in the existing YAML configuration.
+3. Resolve semantic identity centrally during registration without changing status arbitration.
+4. Propagate optional wrapper/environment metadata and parent/definition references.
+5. Display semantic details using the existing frontend names and state routing.
+6. Cover compatibility, priority, scope, parentage, and stable-role regressions.
+7. Synchronize phase documents, run required verification, inspect the affected UI, and prepare a PR.
+
+## Completed State Fidelity plan
+
 ## Objective
 
 Implement explicit event provenance and authoritative state arbitration.

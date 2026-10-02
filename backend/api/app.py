@@ -16,11 +16,12 @@ from backend.observer.git import GitObserver
 from backend.observer.manager import ObserverManager
 from backend.runtime.office import OfficeRuntime
 from backend.state.engine import StateTransitionError
+from backend.state.identity import AgentDefinitionRegistry
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or Settings.load()
-    runtime = OfficeRuntime()
+    runtime = OfficeRuntime(definitions=AgentDefinitionRegistry(settings))
     observer = ObserverManager(runtime, settings.observer)
     usage_monitor = CodexUsageMonitor.from_environment()
 

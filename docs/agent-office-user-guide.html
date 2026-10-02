@@ -110,6 +110,18 @@ npm run dev</code></pre>
   --role Backend \
   --task "Implement authentication API" \
   --repo /home/user/projects/demo</code></pre>
+        <h3>稳定身份与 Subagent</h3>
+        <p>在服务端 YAML 的 <code>agents</code> 中定义名称、稳定角色和职责。也可在每个 <code>projects</code> 条目中提供该项目的 <code>agents</code>。</p>
+        <pre><code>agents:
+  - id: tester
+    name: Tester
+    role: tester
+    responsibilities:
+      - Run unit tests
+      - Investigate failures</code></pre>
+        <pre><code>uv run office-run codex --definition tester --parent lead --task "Verify authentication changes"</code></pre>
+        <p>角色将显示为 Tester；详情包含职责和 Parent Agent ID。<code>--definition</code> 关联可复用定义，运行实例仍有独立 ID；可用 <code>--id</code> 指定实例身份。角色是稳定职责，任务是当前安排，状态是当前活动，工具是执行程序：Backend 运行 pytest 时依然是 Backend。</p>
+        <p>原生/编排器的 <code>source=native</code> 元数据优先于项目定义，项目定义优先于 wrapper/API 默认元数据。<code>--role</code>、<code>--parent</code> 和可重复的 <code>--responsibility</code> 提供显式信息；父 Agent 不必当前可见。不会从命令或提示词推断角色。</p>
         <p>Provider 后面的未知参数会原样传给真实命令，例如：</p>
         <pre><code>uv run office-run claude --name Reviewer --repo /path/to/repo --dangerously-skip-permissions
 uv run office-run opencode --name UI-Agent --role Frontend
@@ -122,7 +134,7 @@ uv run office-run my-agent --name Custom --server http://127.0.0.1:8000/api/even
         <h2>界面操作</h2>
         <ul>
           <li><strong>办公室：</strong>角色沿 A* 路径移动到当前状态对应区域；点击角色打开详情。</li>
-          <li><strong>详情面板：</strong>查看 Provider、角色、个性、任务、PID、分支、worktree、当前工具和最近事件。</li>
+          <li><strong>详情面板：</strong>查看名称、稳定角色、职责、父 Agent、当前任务、状态、工具，以及 Provider、个性、PID、分支、worktree 和最近事件。</li>
           <li><strong>Project：</strong>配置多个仓库后，选择单个仓库或查看全部；worktree Agent 会跟随对应项目筛选。</li>
           <li><strong>Codex 用量：</strong>显示短周期与周周期剩余额度；办公室窗景会随剩余额度在白天、傍晚和深夜之间变化。</li>
           <li><strong>连接状态：</strong><code>connected</code>、<code>reconnecting</code>、<code>disconnected</code> 或 <code>simulation</code>。</li>

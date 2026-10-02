@@ -1,6 +1,6 @@
 # Codex Entry Point
 
-Before implementing the current state-fidelity phase, read these files in order:
+Before implementing the current Semantic Agent Model phase, read these files in order:
 
 1. `docs/VISION.md`
 2. `docs/DECISIONS.md`
@@ -21,6 +21,10 @@ Resolve conflicts using this priority:
 Do not treat the older `agent-office-PROJECT.md` as authoritative when it conflicts with the files above. It remains useful historical context.
 
 Implementation principles for this phase:
+- State Fidelity is complete; preserve EventSource, status provenance, and arbitration;
+- keep stable role/responsibilities distinct from task, state, and executable/tool;
+- resolve semantic identity centrally from native metadata, project definitions, wrapper metadata, then process fallback;
+- do not infer roles from tools/prompts or add an organization-tree UI;
 - preserve the current frontend architecture unless a backend change requires a minimal diagnostic change;
 - keep normalized domain logic provider-agnostic;
 - prefer explicit runtime facts over heuristics;

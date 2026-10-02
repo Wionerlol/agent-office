@@ -100,3 +100,58 @@ def test_legacy_events_and_incremental_websocket_messages_remain_compatible(tmp_
             stop = {"type": "agent.stopped", "agent_id": "legacy"}
             assert client.post("/api/events", json=stop).status_code == 200
             assert websocket.receive_json() == {"type": "agent.stopped", "agent_id": "legacy"}
+
+
+def test_semantic_identity_is_shared_by_http_snapshot_and_incremental_messages(
+    tmp_path: Path,
+) -> None:
+    from backend.models import AgentDefinition
+
+    settings = Settings.for_project(tmp_path)
+    settings.agents = [
+        AgentDefinition(id="tester", name="Tester", role="tester", responsibilities=["Run tests"])
+    ]
+    agent = Agent(
+        id="child",
+        name="Codex 42",
+        provider="codex",
+        repository=str(tmp_path),
+        definition_id="tester",
+        parent_agent_id="lead",
+        task="Verify auth",
+    )
+    with TestClient(create_app(settings)) as client:
+        with client.websocket_connect("/ws") as websocket:
+            assert websocket.receive_json() == {"type": "snapshot", "agents": []}
+            result = client.post(
+                "/api/events",
+                json={
+                    "type": "agent.started",
+                    "agent_id": "child",
+                    "source": "wrapper",
+                    "payload": {"agent": agent.model_dump(mode="json")},
+                },
+            )
+            assert result.status_code == 200
+            assert websocket.receive_json() == result.json()
+            registered = client.get("/api/agents/child").json()
+            assert registered["name"] == "Tester"
+            assert registered["role"] == "tester"
+            assert registered["responsibilities"] == ["Run tests"]
+            assert registered["parent_agent_id"] == "lead"
+            with client.websocket_connect("/ws") as second:
+                assert second.receive_json() == {"type": "snapshot", "agents": [registered]}
+            result = client.post(
+                "/api/events",
+                json={
+                    "type": "agent.tool_started",
+                    "agent_id": "child",
+                    "source": "tool_process",
+                    "payload": {"command": "pytest", "tool": "test"},
+                },
+            )
+            assert result.status_code == 200
+            message = websocket.receive_json()
+            assert message["type"] == "agent.updated"
+            assert message["changes"]["status"] == "testing"
+            assert client.get("/api/agents/child").json()["role"] == "tester"

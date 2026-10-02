@@ -41,9 +41,13 @@ The system should prefer high-confidence, explicit runtime facts over inference.
 
 ## Current direction
 
-The current bottleneck is not scenery or rendering quality. It is state fidelity.
+State Fidelity is complete: explicit provenance and source arbitration make activity trustworthy. Preserve that foundation.
 
-The next implementation phase should make the answer to “what is this agent actually doing?” more accurate by introducing explicit event provenance, source priority, and conflict handling.
+The current phase is Semantic Agent Model. The office should communicate who each agent is, its stable responsibility, and which parent owns a subagent, alongside what it is doing. A project-defined Tester or Reviewer is more meaningful than a generic Codex process name.
+
+Keep role (stable responsibility), task (current assignment), state (runtime activity), and tool (executable) separate. A Backend Engineer running pytest stays a Backend Engineer. Semantic identity comes from explicit runtime metadata and project definitions, never from current tool use or prompt inference.
+
+This phase adds lightweight project definitions and parent references, with semantic names on existing characters and details in AgentPanel. State continues to determine current destinations. Role-based home zones and organization charts remain future work.
 
 ## Long-term product language
 
@@ -57,4 +61,4 @@ Examples:
 - many active agents -> busier office ambience;
 - PR ready -> review-oriented behavior.
 
-These are future extensions. The immediate implementation must first make runtime state trustworthy.
+These remain future extensions. The current implementation adds semantic identity on top of the completed runtime-state foundation.

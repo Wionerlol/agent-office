@@ -1,0 +1,38 @@
+project:
+  name: demo
+  path: .
+
+agents:
+  - id: tester
+    name: Tester
+    role: tester
+    responsibilities:
+      - Run unit tests
+      - Run integration tests
+      - Investigate failures
+  - id: reviewer
+    name: Reviewer
+    role: code_review
+    responsibilities:
+      - Review diffs
+      - Check architecture
+      - Check regressions
+  - id: researcher
+    name: Researcher
+    role: research
+    responsibilities:
+      - Investigate implementation options
+  - id: backend
+    name: Backend Engineer
+    role: backend
+    responsibilities:
+      - Own backend interfaces and behavior
+  - id: frontend
+    name: Frontend Engineer
+    role: frontend
+    responsibilities:
+      - Own frontend interaction and presentation
+
+server:
+  host: 127.0.0.1
+  port: 8000
