@@ -3,10 +3,12 @@ import logging
 from contextlib import suppress
 from datetime import UTC, datetime
 
+import psutil
+
 from backend.adapters.base import AgentAdapter
 from backend.adapters.generic import GenericProcessAdapter
 from backend.config import ObserverSettings
-from backend.models import Agent, AgentEvent, AgentEventType, AgentState
+from backend.models import Agent, AgentEvent, AgentEventType, AgentState, EventSource
 from backend.observer.tools import ToolObserver
 from backend.runtime.office import OfficeRuntime
 
@@ -41,21 +43,24 @@ class ObserverManager:
             self._initialized = True
         detected: dict[str, Agent] = {}
         detected_by: dict[str, AgentAdapter] = {}
+        detection_failed = False
         for adapter in self.adapters:
             try:
                 for agent in await adapter.detect():
                     detected[agent.id] = agent
                     detected_by[agent.id] = adapter
             except Exception:
+                detection_failed = True
                 logger.exception(
                     "adapter detection failed",
                     extra={"adapter": type(adapter).__name__},
                 )
 
         for agent_id, agent in detected.items():
-            if agent_id not in self._managed_ids:
+            if agent_id not in {item.id for item in self.runtime.registry.all()}:
                 await self.runtime.apply(
                     AgentEvent(
+                        source=EventSource.PROCESS,
                         type=AgentEventType.AGENT_STARTED,
                         agent_id=agent_id,
                         payload={"agent": agent.model_dump(mode="json")},
@@ -73,10 +78,23 @@ class ObserverManager:
                     name=f"observe-tools-{agent_id}",
                 )
 
-        for agent_id in self._managed_ids - detected.keys():
+        missing = set() if detection_failed else self._managed_ids - detected.keys()
+        still_alive: set[str] = set()
+        for agent_id in missing:
             try:
+                current = self.runtime.registry.get(agent_id)
+                if current.pid is not None and await asyncio.to_thread(
+                    psutil.pid_exists, current.pid
+                ):
+                    still_alive.add(agent_id)
+                    continue
                 await self.runtime.apply(
-                    AgentEvent(type=AgentEventType.AGENT_STOPPED, agent_id=agent_id)
+                    AgentEvent(
+                        type=AgentEventType.AGENT_STOPPED,
+                        agent_id=agent_id,
+                        source=EventSource.PROCESS,
+                        payload={"pid": current.pid},
+                    )
                 )
                 logger.info("agent stopped", extra={"agent_id": agent_id})
             except KeyError:
@@ -89,7 +107,9 @@ class ObserverManager:
                 task.cancel()
                 await asyncio.gather(task, return_exceptions=True)
 
-        self._managed_ids = set(detected)
+        self._managed_ids = (
+            (self._managed_ids | set(detected)) if detection_failed else set(detected) | still_alive
+        )
         for agent in detected.values():
             try:
                 await self._mark_idle(agent.id)
@@ -102,9 +122,7 @@ class ObserverManager:
         interval = self.settings.tool_scan_interval
         while not self._stopped.is_set():
             try:
-                events = await asyncio.to_thread(
-                    self._tool_observer.scan, agent.id, agent.pid
-                )
+                events = await asyncio.to_thread(self._tool_observer.scan, agent.id, agent.pid)
                 for event in events:
                     try:
                         await self.runtime.apply(event)
@@ -138,6 +156,7 @@ class ObserverManager:
             return
         await self.runtime.apply(
             AgentEvent(
+                source=EventSource.TIMEOUT,
                 type=AgentEventType.STATE_CHANGED,
                 agent_id=agent.id,
                 payload={"from": agent.status, "to": AgentState.IDLE},
@@ -149,9 +168,7 @@ class ObserverManager:
         while not self._stopped.is_set():
             await self.run_once()
             with suppress(TimeoutError):
-                await asyncio.wait_for(
-                    self._stopped.wait(), timeout=self.settings.scan_interval
-                )
+                await asyncio.wait_for(self._stopped.wait(), timeout=self.settings.scan_interval)
 
     def start(self) -> None:
         if self._task is None or self._task.done():

@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from backend.adapters.generic import CustomAgentAdapter, GenericProcessAdapter
-from backend.models import AgentState
+from backend.models import AgentEventType, AgentState, EventSource
 from backend.observer.process import ProcessSnapshot
 from backend.observer.tools import state_for_command, tool_kind
 
@@ -31,6 +31,10 @@ async def test_generic_adapter_detects_an_explicitly_tagged_process(tmp_path: Pa
         process.terminate()
         process.wait(timeout=5)
 
+    stopped = await anext(GenericProcessAdapter().observe(agents[0]))
+    assert stopped.source is EventSource.PROCESS
+    assert stopped.type is AgentEventType.AGENT_STOPPED
+    assert stopped.payload["pid"] == process.pid
     assert len(agents) == 1
     assert agents[0].model_dump(include={"id", "name", "provider", "repository"}) == {
         "id": "worker-one",
@@ -110,3 +114,25 @@ def test_commands_are_classified_into_domain_states(command: str, state: AgentSt
 )
 def test_tool_commands_are_named_for_the_office(command: str, kind: str) -> None:
     assert tool_kind(command) == kind
+
+
+@pytest.mark.asyncio
+async def test_wrapped_descendants_share_identity_and_use_the_root_pid() -> None:
+    adapter = GenericProcessAdapter()
+    environment = {"AGENT_OFFICE_ID": "backend", "AGENT_OFFICE_PROVIDER": "codex"}
+    adapter.processes.snapshots = lambda: [
+        ProcessSnapshot(12, 11, ["codex", "exec"], "/repo", 2, environment),
+        ProcessSnapshot(11, 1, ["codex"], "/repo", 1, environment),
+    ]
+    agents = await adapter.detect()
+    assert [(agent.id, agent.pid) for agent in agents] == [("backend", 11)]
+
+
+@pytest.mark.asyncio
+async def test_unwrapped_supported_agent_remains_discoverable() -> None:
+    adapter = GenericProcessAdapter()
+    adapter.processes.snapshots = lambda: [
+        ProcessSnapshot(11, 1, ["codex"], "/repo", 1, {}),
+    ]
+    agents = await adapter.detect()
+    assert [(agent.id, agent.pid) for agent in agents] == [("codex-11", 11)]

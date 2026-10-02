@@ -7,7 +7,7 @@ import pytest
 import backend.cli as cli_module
 from backend.cli import build_parser, load_cli_settings, run_wrapped
 from backend.config import ServerSettings, Settings
-from backend.models import AgentEvent, AgentEventType
+from backend.models import AgentEvent, AgentEventType, EventSource
 from backend.runtime.emitters import HttpEventEmitter
 
 
@@ -23,6 +23,7 @@ def test_office_run_emits_a_real_process_lifecycle(tmp_path: Path) -> None:
         emitter=events.append,
     )
 
+    assert all(event.source is EventSource.WRAPPER for event in events)
     assert exit_code == 0
     assert [event.type for event in events] == [
         AgentEventType.AGENT_STARTED,

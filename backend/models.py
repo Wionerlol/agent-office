@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any, Literal, Self
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 PERSONALITIES = ("Focused", "Curious", "Steady", "Methodical", "Bold")
 
@@ -61,11 +61,28 @@ class AgentEventType(StrEnum):
     ERROR = "agent.error"
 
 
+class EventSource(StrEnum):
+    NATIVE = "native"
+    WRAPPER = "wrapper"
+    TOOL_PROCESS = "tool_process"
+    FILESYSTEM = "filesystem"
+    GIT = "git"
+    PROCESS = "process"
+    TIMEOUT = "timeout"
+    API = "api"
+
+
 class AgentEvent(BaseModel):
     type: AgentEventType
     agent_id: str
     timestamp: datetime = Field(default_factory=utc_now)
+    source: EventSource = EventSource.API
     payload: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("timestamp")
+    @classmethod
+    def normalize_timestamp(cls, value: datetime) -> datetime:
+        return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
 
 
 class ProjectInfo(BaseModel):
