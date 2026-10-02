@@ -43,11 +43,15 @@ The system should prefer high-confidence, explicit runtime facts over inference.
 
 State Fidelity is complete: explicit provenance and source arbitration make activity trustworthy. Preserve that foundation.
 
-The current phase is Semantic Agent Model. The office should communicate who each agent is, its stable responsibility, and which parent owns a subagent, alongside what it is doing. A project-defined Tester or Reviewer is more meaningful than a generic Codex process name.
+Semantic Agent Model is also complete. The office should communicate who each agent is, its stable responsibility, and which parent owns a subagent, alongside what it is doing. A project-defined Tester or Reviewer is more meaningful than a generic Codex process name.
 
 Keep role (stable responsibility), task (current assignment), state (runtime activity), and tool (executable) separate. A Backend Engineer running pytest stays a Backend Engineer. Semantic identity comes from explicit runtime metadata and project definitions, never from current tool use or prompt inference.
 
-This phase adds lightweight project definitions and parent references, with semantic names on existing characters and details in AgentPanel. State continues to determine current destinations. Role-based home zones and organization charts remain future work.
+That phase added lightweight project definitions and parent references, with semantic names on existing characters and details in AgentPanel. State continues to determine current destinations. Role-based home zones and organization charts remain future work.
+
+Phase 3A Native Runtime Capability Probe is complete. Its evidence report distinguishes native facts from structured observations and process/heuristic fallbacks. The real Codex/DevRouter path exposes explicit user-input waiting, file-change/command lifecycles and subagent parentage; it does not establish continuous THINKING/CODING coverage or stable native roles. See [the capability matrix](runtime-probe/CAPABILITY_MATRIX.md).
+
+Phase 3B Native Adapter is not yet implemented. Its design must start from these runtime facts, preserving the two completed foundations and the principle explicit native fact > structured runtime observation > process/tool observation > filesystem fallback > heuristic inference. No prompt/task NLP is introduced.
 
 ## Long-term product language
 

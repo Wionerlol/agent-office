@@ -16,3 +16,4 @@ frontend/dist/
 
 # Runtime-generated data
 **/runtime/*.jsonl
+runtime/probe/
