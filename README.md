@@ -29,6 +29,16 @@ uv run office-run codex --definition tester --parent lead --task "Verify authent
 
 The registered instance appears as Tester, with its definition responsibilities and parent ID in details. Role remains stable while task, state and executable change. Native/orchestrator events can provide authoritative overrides with `source=native`; project defaults outrank wrapper/API metadata. Existing unregistered agents retain fallback identity. Use `--id` when a caller owns instance identity; otherwise definition-based launches get distinct IDs.
 
+## Native runtime capability probe (Phase 3A)
+
+State Fidelity and Semantic Agent Model are complete. Phase 3A provides an opt-in diagnostic probe; the Phase 3B native adapter is not yet implemented. See the [capability matrix](docs/runtime-probe/CAPABILITY_MATRIX.md), [repeatable commands](docs/runtime-probe/CODEX.md) and [observed samples](docs/runtime-probe/SAMPLES.md).
+
+```bash
+uv run python -m backend.probe experiment --output-dir runtime/probe/run-01
+```
+
+This runs controlled real Codex turns in a disposable repository using existing runtime authentication. Logs are sanitized and ignored; the production API, domain states, identity resolver and frontend remain unchanged. For a loaded native TUI thread, `observe` attaches to its Unix WebSocket without answering requests or changing settings.
+
 ## DevRouter integration
 
 When `office-run` is installed on PATH, DevRouter automatically uses it to wrap the Codex process inside each new project session. Start the shared Agent Office server, then run `devrouter` in the target repository; do not nest it as `office-run devrouter`. Use `devrouter --office` to require monitoring or `devrouter --no-office` to start Codex directly.

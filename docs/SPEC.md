@@ -1,6 +1,25 @@
 # Agent Office Implementation Spec
 
-## Current phase: Semantic Agent Model
+## Phase state and diagnostic contract
+
+| Phase | State |
+| --- | --- |
+| 1 State Fidelity | COMPLETE |
+| 2 Semantic Agent Model | COMPLETE |
+| 3A Native Runtime Capability Probe | COMPLETE |
+| 3B Native Adapter | NOT YET IMPLEMENTED |
+
+`backend/probe/` provides opt-in capture, experiment and selected-thread observe commands. It has no live startup hook, API endpoint, frontend protocol, AgentState addition or AgentEvent normalization. It does not replace EventSource, status arbitration, SemanticIdentityResolver, definitions or current OfficeScene routing.
+
+Capture explicitly selected exec/app-server/rollout JSONL through a strict content-denying projector. Records include receipt sequence, UTC receipt timestamp, optional provider timestamp/ordinal, provider, pseudonymized session/request IDs, original event discriminator, diagnostic source string and projected payload. Nested native item/status/relationship structure remains intact. IDs are stable pseudonyms; workspace paths are relative; free text, arguments, outputs, diffs and credentials are hidden; unknown fields are dropped. Only sanitized output is written to ignored runtime/probe files, created exclusively with mode 0600.
+
+Observe connects by Unix WebSocket to a specified loaded native thread. Verify workspace and loaded status before subscription. Use initialize/initialized and thread/resume(excludeTurns=true), without config/input overrides, then scope to the root and explicitly reported children. Never answer server requests or start/interrupt turns on this path. Closing a diagnostic socket does not signal lifecycle death. The standalone experiment command alone drives its own controlled model turns and answers its fixture question after recording real waiting.
+
+The probe is a bounded diagnostic projection, not a lossless archive or the permanent office protocol. Replayed pending requests, nullable metadata, absent timestamps, CLI/daemon version differences and unrecognized fields must remain visible as limits. Missing native sources fail the explicit diagnostic command without affecting normal Agent Office/Codex execution.
+
+The [capability matrix](runtime-probe/CAPABILITY_MATRIX.md), [source guide](runtime-probe/CODEX.md), [DevRouter report](runtime-probe/DEVROUTER.md) and [observed samples](runtime-probe/SAMPLES.md) are the Phase 3A evidence. Exact native input-wait facts remain distinct from generic WAITING. Native subagent identity/parentage must never be fabricated from OS children. Existing command classification is process/structured observation, not a native TESTING or SEARCHING state. No native adapter, filesystem CODING detection, prompt NLP, role layout, org chart or database is included.
+
+## Completed Phase 2: Semantic Agent Model
 
 State Fidelity is complete. Its contract below remains authoritative for activity arbitration. Semantic identity is resolved independently; tool/state events never assign roles.
 

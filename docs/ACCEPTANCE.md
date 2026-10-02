@@ -1,8 +1,35 @@
 # Agent Office Acceptance Criteria
 
-## Semantic Agent Model
+## Completed Phase 3A Native Runtime Capability Probe
 
-The current phase is complete when:
+- Repeatable real Codex structured capture and selected-thread observing are opt-in and isolated.
+- Recorded output is sanitized, private and ignored; no credentials, environments or unrelated message content are logged.
+- Actual direct Codex normal turns, apply_patch editing, rg, shell and pytest were exercised.
+- A legitimate unresolved contract explicitly triggered native request_user_input and waitingOnUserInput; direct and actual DevRouter input resolution were observed.
+- Real subagent spawn, independent ID, native parent metadata, nickname, wait and completion were exercised in both paths. Native stable roles were null and are not invented.
+- Installed DevRouter's actual tmux → office-run → Codex path was exercised; shared-daemon event visibility and the foreground process-tree limitation are documented.
+- Every confirmed matrix claim has reviewed observed samples; partial/unavailable/unknown claims remain distinct. No heuristic is labeled native.
+- State Fidelity/Semantic regressions pass; no production adapter, domain-state change or frontend change is included.
+
+Verification (2026-10-02):
+
+- `uv run pytest -q`: 140 passed, including 21 probe tests; two existing deprecation warnings.
+- `uv run ruff check backend main.py`: passed.
+- `cd frontend && npm test -- --reporter=dot`: 27 passed across 12 files.
+- `cd frontend && npm run lint`: passed.
+- `cd frontend && npm run build`: passed.
+- `git diff --check`: passed.
+- Public experiment CLI A–E: all five real turns completed; D requested input, E emitted child lifecycle. B's actual return value was independently verified as 42; C's commands exited successfully.
+- Public capture pipeline: actual Codex and probe both exited 0. Public observe CLI: exited 0 against the live controlled DevRouter thread; its TUI remained active.
+- DevRouter tools: actual rg/printf/pytest succeeded; a separate 45-second/10-ms scan of the wrapper's TUI PID yielded zero tool observations. Native history confirmed three successful command completions. Zero observations is a documented source limitation, not a test pass.
+
+See [matrix](runtime-probe/CAPABILITY_MATRIX.md), [Codex sources/corrections](runtime-probe/CODEX.md), [DevRouter](runtime-probe/DEVROUTER.md) and [samples](runtime-probe/SAMPLES.md). Protocol-unavailable and malformed-input unit fixtures test the probe only; they do not verify provider capabilities. An additional default-mode input experiment ended with native errors and a failed turn; input capability in that mode remains unknown. The failed initial framing/filter/projector/fixture attempts are recorded in the source guide and excluded from passing evidence.
+
+Phase 1 State Fidelity COMPLETE; Phase 2 Semantic Agent Model COMPLETE; Phase 3A COMPLETE; Phase 3B Native Adapter NOT YET IMPLEMENTED.
+
+## Completed Semantic Agent Model
+
+The completed phase satisfies:
 
 - Legacy Agent payloads validate with safe semantic defaults.
 - YAML project definitions load; duplicate IDs within one project fail clearly and definitions cannot leak across projects.
