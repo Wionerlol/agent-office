@@ -1,14 +1,17 @@
 import argparse
+import json
 import os
 import re
 import subprocess
 from collections.abc import Callable, Sequence
 from pathlib import Path
+from uuid import uuid4
 
 from backend.config import Settings
 from backend.models import Agent, AgentEvent, AgentEventType, AgentState, EventSource
 from backend.observer.git import GitObserver
 from backend.runtime.emitters import HttpEventEmitter
+from backend.state.identity import responsibilities_from_environment
 
 
 def _identifier(name: str) -> str:
@@ -26,10 +29,25 @@ def run_wrapped(
     task: str | None,
     emitter: Callable[[AgentEvent], None],
     agent_id: str | None = None,
+    parent_agent_id: str | None = None,
+    definition_id: str | None = None,
+    responsibilities: list[str] | None = None,
 ) -> int:
     repository = repository.resolve()
     git = GitObserver(repository).snapshot()
-    identifier = agent_id or _identifier(name)
+    definition_id = definition_id or os.environ.get("AGENT_OFFICE_DEFINITION_ID") or None
+    parent_agent_id = parent_agent_id or os.environ.get("AGENT_OFFICE_PARENT_ID") or None
+    role = role or os.environ.get("AGENT_OFFICE_ROLE") or None
+    responsibilities = (
+        responsibilities
+        if responsibilities is not None
+        else responsibilities_from_environment(os.environ)
+    )
+    identifier = agent_id or (
+        f"{_identifier(definition_id)}-{uuid4().hex}" if definition_id else _identifier(name)
+    )
+    if parent_agent_id == identifier:
+        raise ValueError("An agent cannot be its own parent")
     environment = {
         **os.environ,
         "AGENT_OFFICE_ID": identifier,
@@ -38,6 +56,9 @@ def run_wrapped(
         "AGENT_OFFICE_REPOSITORY": str(repository),
         "AGENT_OFFICE_TASK": task or "",
         "AGENT_OFFICE_ROLE": role or "",
+        "AGENT_OFFICE_PARENT_ID": parent_agent_id or "",
+        "AGENT_OFFICE_DEFINITION_ID": definition_id or "",
+        "AGENT_OFFICE_RESPONSIBILITIES": json.dumps(responsibilities),
         "AGENT_OFFICE_WORKTREE": git.worktree,
         "AGENT_OFFICE_BRANCH": git.branch or "",
     }
@@ -53,6 +74,9 @@ def run_wrapped(
         status=AgentState.STARTING,
         task=task,
         role=role,
+        parent_agent_id=parent_agent_id,
+        definition_id=definition_id,
+        responsibilities=responsibilities,
         metadata={"command": list(command)},
     )
     emitter(
@@ -115,12 +139,15 @@ def load_cli_settings() -> Settings:
 def build_parser(settings: Settings | None = None) -> argparse.ArgumentParser:
     settings = settings or Settings()
     parser = argparse.ArgumentParser(
-        prog="office-run", description="Run an agent inside Agent Office"
+        prog="office-run", description="Run an agent inside Agent Office", allow_abbrev=False
     )
     parser.add_argument("provider", help="Executable/provider name, for example codex or claude")
     parser.add_argument("--id", dest="agent_id")
     parser.add_argument("--name")
     parser.add_argument("--role")
+    parser.add_argument("--parent", dest="parent_agent_id")
+    parser.add_argument("--definition", dest="definition_id")
+    parser.add_argument("--responsibility", dest="responsibilities", action="append")
     parser.add_argument("--task")
     parser.add_argument("--repo", type=Path, default=Path.cwd())
     parser.add_argument("--server", default=_server_endpoint(settings))
@@ -135,16 +162,21 @@ def main(argv: Sequence[str] | None = None) -> None:
     try:
         exit_code = run_wrapped(
             [args.provider, *agent_args],
-            name=args.name or args.provider.title(),
+            name=args.name or os.environ.get("AGENT_OFFICE_NAME") or args.provider.title(),
             provider=args.provider,
             repository=args.repo,
             role=args.role,
             task=args.task,
             emitter=emitter,
             agent_id=args.agent_id,
+            parent_agent_id=args.parent_agent_id,
+            definition_id=args.definition_id,
+            responsibilities=args.responsibilities,
         )
     except FileNotFoundError as error:
         parser.error(f"executable not found: {error.filename}")
+    except ValueError as error:
+        parser.error(str(error))
     raise SystemExit(exit_code)
 
 

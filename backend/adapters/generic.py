@@ -1,13 +1,18 @@
 import asyncio
+import logging
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from pathlib import Path
 
 import psutil
+from pydantic import ValidationError
 
 from backend.adapters.base import AgentAdapter
 from backend.models import Agent, AgentEvent, AgentEventType, AgentState, EventSource
 from backend.observer.process import ProcessObserver, ProcessSnapshot
+from backend.state.identity import responsibilities_from_environment
+
+logger = logging.getLogger(__name__)
 
 KNOWN_PROVIDERS = frozenset({"codex", "claude", "opencode"})
 
@@ -33,8 +38,13 @@ class GenericProcessAdapter(AgentAdapter):
     async def detect(self) -> list[Agent]:
         detected: list[tuple[ProcessSnapshot, Agent]] = []
         for process in await asyncio.to_thread(self.processes.snapshots):
-            if agent := self._to_agent(process):
-                detected.append((process, agent))
+            try:
+                if agent := self._to_agent(process):
+                    detected.append((process, agent))
+            except ValidationError:
+                logger.warning(
+                    "Ignoring invalid agent process metadata", extra={"pid": process.pid}
+                )
         parent_pids = {process.parent_pid for process, _ in detected}
         # Wrapped descendants inherit the same ID. Observe their oldest/root process,
         # not a nested tool that may exit while the wrapped agent is still alive.
@@ -90,10 +100,13 @@ class GenericProcessAdapter(AgentAdapter):
             branch=environment.get("AGENT_OFFICE_BRANCH"),
             status=AgentState.STARTING,
             task=environment.get("AGENT_OFFICE_TASK"),
-            role=environment.get("AGENT_OFFICE_ROLE"),
+            role=environment.get("AGENT_OFFICE_ROLE") or None,
+            parent_agent_id=environment.get("AGENT_OFFICE_PARENT_ID") or None,
+            definition_id=environment.get("AGENT_OFFICE_DEFINITION_ID") or None,
+            responsibilities=responsibilities_from_environment(environment),
             started_at=created,
             last_active_at=created,
-            metadata={"command": process.command},
+            metadata={"command": process.command, "wrapped": bool(explicit)},
         )
 
 

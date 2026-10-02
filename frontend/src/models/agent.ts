@@ -25,6 +25,9 @@ export interface Agent {
   status: AgentState;
   task: string | null;
   role?: string | null;
+  responsibilities?: string[];
+  parent_agent_id?: string | null;
+  definition_id?: string | null;
   current_tool: string | null;
   changed_files: string[];
   started_at: string;

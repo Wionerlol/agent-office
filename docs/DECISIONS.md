@@ -139,3 +139,67 @@ Do not add a filesystem observer or new timing configuration in this phase. The 
 
 **Reason**
 A shell or ancillary child finishing must not interrupt an active test/search process. Existing scan and idle settings are sufficient. Filesystem-based CODING remains optional in the handoff and would require separate noise filtering and coalescing work.
+
+---
+
+## Decision 11: Stable semantics extend the existing Agent without replacing runtime facts
+
+**Decision**
+Add AgentDefinition (`id`, `name`, optional free-form `role`, and `responsibilities`) separately from runtime instances. Agent gains nullable `definition_id`/`parent_agent_id` and a fresh empty responsibilities list. Existing role is stable responsibility; task is current assignment, status is activity, and current_tool is executable. A parent reference denotes a subagent and may refer to an unobserved parent. Reject self-parent references; do not build or validate an organization graph. Existing EventSource/status arbitration remains unchanged.
+
+**Reason**
+A Backend Engineer running pytest remains a Backend Engineer. Definition IDs describe reusable project identities; runtime IDs/PIDs describe individual running instances. Optional fields keep old payloads valid.
+
+**Rejected Alternatives**
+- Infer roles or names from current commands, prompts, or tasks.
+- Repurpose task/state/tool fields to store identity.
+- Require active parent registration or cascade child deletion when a parent exits.
+
+---
+
+## Decision 12: Use the existing project YAML for a repository-scoped definition registry
+
+**Decision**
+Support top-level `agents` scoped to the primary project, and per-project `agents` in configured project entries. Match explicit definition_id, otherwise exact instance id, by repository then registered worktree root. Reject duplicate definition IDs within a project; allow reuse across different repositories. An unknown explicit selector uses fallback identity. Load once on server startup. Include a separate example configuration; preserve local office configuration.
+
+**Reason**
+This extends the current configuration without a database, new dependency, or implicit cross-project name matching. Multiple runtime instances can share one definition while retaining separate IDs.
+
+**Rejected Alternatives**
+- A global registry whose names accidentally apply to every repository.
+- Runtime filesystem discovery of definitions or implicit Git/worktree lookups on the event loop.
+- Database persistence, hot reload, or fuzzy matching in this phase.
+
+---
+
+## Decision 13: Resolve semantics centrally with per-field authority, apart from activity evidence
+
+**Decision**
+OfficeRuntime uses SemanticIdentityResolver. Semantic authority is native/orchestrator (`source=native`) > project definition > wrapper/API compatibility metadata > process fallback. AGENT_OFFICE_ID-tagged passive metadata is marked as wrapped transport evidence; observers never resolve definitions or infer roles. Native normalized fields override defaults individually. API/default events retain a useful explicit-metadata tier alongside wrapper, while callers needing authoritative overrides use source=native. Existing registration source/recency checks remain intact.
+
+Missing/null runtime semantic values and empty runtime responsibilities are absence of new evidence. Duplicate registrations retain stronger semantics and current state/tool/provenance, and omitted optional process/assignment fields cannot erase existing facts. Explicit semantic clear/rebind operations are deferred; TASK_UPDATED still supports changing/clearing the current task. Invalid passive metadata is isolated per process.
+
+**Reason**
+Definition names and responsibilities should not be displaced by generic Codex names during discovery or wrapper retries. Native orchestration can provide more precise responsibility and parent metadata. Partial registrations must not remove the process PID being observed or erase defaults.
+
+**Rejected Alternatives**
+- Reuse activity source rank as the entire semantic identity policy (definitions must outrank wrapper metadata without changing activity precedence).
+- Resolve definitions independently in wrapper, observers, and frontend.
+- Let model defaults/nulls silently clear stable metadata.
+
+---
+
+## Decision 14: Propagate explicit relationships and keep presentation/state routing separate
+
+**Decision**
+Extend office-run with optional --parent, --definition and repeated --responsibility. Use AGENT_OFFICE_PARENT_ID, AGENT_OFFICE_DEFINITION_ID and JSON-array AGENT_OFFICE_RESPONSIBILITIES, plus existing name/role variables. Arguments override environment defaults. Definition-based launches get a random instance suffix unless --id is supplied; legacy commands retain existing IDs. Parentage is explicit and is not inferred from OS child processes. The server resolves definitions.
+
+Keep OfficeScene unchanged: its existing agent.name label shows enriched identity. AgentPanel adds responsibilities, parent ID, definition, and separate current task/state/tool. New TypeScript fields are optional for old servers and fixtures. Keep visualFor(state, deskId) as the current-destination interface; role-to-home-zone behavior remains separate future work.
+
+**Reason**
+One reusable Tester definition can describe several distinct subagents. The current renderer already accepts normalized names, and a small details change is enough to expose semantics without changing room/layout behavior.
+
+**Rejected Alternatives**
+- Use definition ID as the unique runtime ID for all instances.
+- Treat every OS child executable as an organizational subagent.
+- Add role-specific destinations, an organization chart, or a renderer redesign now.

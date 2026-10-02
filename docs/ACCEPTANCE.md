@@ -1,6 +1,50 @@
 # Agent Office Acceptance Criteria
 
-The phase is complete when all of the following are true.
+## Semantic Agent Model
+
+The current phase is complete when:
+
+- Legacy Agent payloads validate with safe semantic defaults.
+- YAML project definitions load; duplicate IDs within one project fail clearly and definitions cannot leak across projects.
+- A matching Tester runtime subagent appears with the semantic name, stable role, responsibilities, definition ID, and parent ID.
+- Native metadata overrides project defaults; project defaults override wrapper metadata; generic fallback agents still work.
+- Weaker/partial rediscovery preserves stronger identity and existing activity provenance.
+- Backend agents retain roles while running pytest, search, or other tools.
+- office-run flags/environment propagate semantic metadata and allow separate instances of one definition.
+- Existing HTTP and WebSocket protocol shapes remain compatible.
+- AgentPanel renders semantic identity and older agents; character labels use normalized names.
+- OfficeScene and state-to-zone routing remain unchanged; no NLP, filesystem CODING detection, database, SaaS, or org chart is added.
+- Both test suites, both linters, production build, and diff checks pass.
+
+Smoke procedure: run a server with a Tester definition, register a runtime instance with `definition_id=tester` and `parent_agent_id=lead`, confirm the character name and details, then change task/state/tool and verify the role and parent remain stable. Unregistered instances retain fallback names. A parent need not be active to display its ID.
+
+### Semantic verification evidence (2026-10-02)
+
+| Criteria | Evidence |
+| --- | --- |
+| Safe defaults, YAML scope/matching, native precedence, passive protection, parentage, restart cleanup, stable roles | `backend/tests/test_semantic_identity.py` |
+| Actual child environment, argument precedence, distinct instances, legacy launch behavior | `backend/tests/test_cli.py` |
+| Passive metadata transport and isolation of invalid metadata | `backend/tests/test_adapters.py` |
+| Legacy/semantic HTTP, snapshot and incremental WebSocket contracts | `backend/tests/test_api.py`, `frontend/src/api/websocket.test.ts` |
+| Semantic details and legacy frontend rendering | `frontend/src/components/AgentPanel.test.tsx` |
+| Existing activity, tool concurrency and real-process regression | Existing State Fidelity tests, including `backend/tests/test_live_fidelity.py` |
+
+Required suite results:
+
+- `uv run pytest -q`: 119 passed; two existing Starlette/httpx/anyio deprecation warnings.
+- `uv run ruff check backend main.py`: passed.
+- `cd frontend && npm test -- --reporter=dot`: 27 passed across 12 files.
+- `cd frontend && npm run lint`: passed.
+- `cd frontend && npm run build`: passed.
+- `git diff --check`: passed.
+
+Local browser verification uses the production build, a loopback FastAPI server with a Tester definition, and controlled normalized events. It confirms Tester details, responsibilities, parent ID, current assignment/state/tool, and stable semantics after tool completion. Screenshots are in `docs/images/semantic-agent-details.png` and `docs/images/semantic-agent-label.png`. Quota data is stubbed for these fixtures. This validates the local HTTP/WebSocket/UI integration, not a provider-specific native subagent feed or real model calls.
+
+Early browser harness attempts assumed a fresh-start response on repeated registration, selected a moving character too soon, or used an incorrect event name. These fixture errors were corrected and are not counted as passing evidence. No test assertions or product behavior were weakened.
+
+## Completed State Fidelity acceptance
+
+The previous phase is complete; all of the following remain regression requirements.
 
 ## Provenance
 

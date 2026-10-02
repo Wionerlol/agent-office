@@ -1,5 +1,39 @@
 # Agent Office Implementation Spec
 
+## Current phase: Semantic Agent Model
+
+State Fidelity is complete. Its contract below remains authoritative for activity arbitration. Semantic identity is resolved independently; tool/state events never assign roles.
+
+### Domain
+
+`AgentDefinition` contains `id`, `name`, optional free-form `role`, and `responsibilities` (a fresh empty list by default). `Agent` retains every existing field and adds `responsibilities=[]`, `parent_agent_id=None`, and `definition_id=None`; existing `role` remains stable responsibility. Task, status, and current_tool keep their meanings. A non-null parent ID identifies a subagent. Parent IDs may reference agents outside the current snapshot; self-parent references are invalid. No organization graph or cascade deletion is implemented.
+
+### Project registry
+
+The existing office YAML accepts top-level `agents`, scoped to `project.path`, and optional `agents` inside each `projects` entry (or the primary `project`). Definitions are loaded once with server configuration. IDs must be unique within a repository, including definitions distributed across duplicate project-path entries; different projects may reuse an ID. No filesystem scanning, hot reload, database, or global name guessing is added.
+
+Match exact `definition_id` when present, otherwise exact runtime `id`, first by repository and then by the registered worktree root. An explicit unknown selector preserves fallback identity rather than matching another definition. Multiple instances can reference the same definition. See `config/semantic-agents.example.yaml`.
+
+### Semantic resolution
+
+`SemanticIdentityResolver`, injected into OfficeRuntime through `AgentDefinitionRegistry`, owns per-field identity evidence. Authority is native/orchestrator metadata (`source=native`) > project definition > explicit wrapper/API metadata > generic process fallback. Passive transport of AGENT_OFFICE_ID is marked as wrapped evidence, without moving authority selection into the observer. Native callers supply normalized first-class Agent fields; no provider-specific integration or task/prompt NLP is added.
+
+Present, non-empty native fields override definition defaults. Missing/null semantic fields and empty runtime responsibilities mean no new evidence, so partial or legacy registrations retain defaults and existing semantics. Definition responsibilities may be an empty list. Semantic clearing/rebinding through partial registrations is not introduced in this phase. Comparable evidence respects registration recency. Duplicate starts preserve runtime status, tool, activity timestamps, and status provenance; absent optional process/assignment fields cannot erase existing values. Task clearing remains available through TASK_UPDATED. Weaker passive registration cannot overwrite stronger identity.
+
+### office-run
+
+Existing commands and legacy instance-ID derivation remain supported. Optional `--parent`, `--definition`, and repeated `--responsibility` supplement `--name`, `--role`, and `--task`. Metadata is propagated in AGENT_OFFICE_PARENT_ID, AGENT_OFFICE_DEFINITION_ID, AGENT_OFFICE_RESPONSIBILITIES (JSON string array), and existing identity variables. Explicit arguments take precedence over environment defaults. Malformed responsibility environment values are treated as absent. Definition-based launches without `--id` get a definition-prefixed random instance suffix; caller-provided IDs are unchanged. Parentage is explicit and never inferred from the OS process tree.
+
+Definitions are resolved at server registration, not by the wrapper. Therefore project defaults outrank wrapper name/role/responsibilities; native metadata is the authoritative way to override them.
+
+### Frontend and compatibility
+
+Snapshot / agent.started / agent.updated / agent.stopped message shapes are unchanged. The new fields are additive. TypeScript treats them as optional for older servers/fixtures. OfficeScene continues to label characters using the normalized `agent.name`; it has no definition/provider logic and its architecture is unchanged. AgentPanel displays stable role, responsibilities and parent ID when available, alongside separate current task/state/tool and optional definition ID. Old agents remain renderable.
+
+`visualFor(state, deskId)` remains the state-to-current-destination seam. A future role-to-home-zone mapping can be separate; this phase implements no role-based layout or destinations.
+
+## Completed phase: State Fidelity
+
 ## Scope
 
 Implement the next reliability phase for Agent Office: improve state fidelity without rewriting the rendering system.

@@ -5,6 +5,11 @@ from backend.models import Agent, AgentEvent, AgentEventType, AgentState, EventS
 from backend.observer.tools import state_for_command
 from backend.runtime.bus import EventBus
 from backend.state.engine import AgentStateEngine
+from backend.state.identity import (
+    SEMANTIC_FIELDS,
+    AgentDefinitionRegistry,
+    SemanticIdentityResolver,
+)
 from backend.state.provenance import (
     SOURCE_PRIORITY,
     StatusEvidence,
@@ -22,12 +27,14 @@ class OfficeRuntime:
         registry: AgentRegistry | None = None,
         bus: EventBus | None = None,
         state_engine: AgentStateEngine | None = None,
+        definitions: AgentDefinitionRegistry | None = None,
     ) -> None:
         self.registry = registry or AgentRegistry()
         self.bus = bus or EventBus()
         self.state_engine = state_engine or AgentStateEngine()
         self._status_evidence: dict[str, StatusEvidence] = {}
         self._identity_evidence: dict[str, StatusEvidence] = {}
+        self.semantic_identity = SemanticIdentityResolver(definitions)
 
     def status_evidence(self, agent_id: str) -> StatusEvidence:
         agent = self.registry.get(agent_id)
@@ -59,6 +66,9 @@ class OfficeRuntime:
                 ):
                     return self._ignored(agent.id)
                 # Discovery/start retries enrich identity without resetting current activity.
+                resolved = self.semantic_identity.resolve(
+                    agent, event.source, event.timestamp, existing
+                )
                 changes = agent.model_dump(
                     exclude={
                         "status",
@@ -69,6 +79,12 @@ class OfficeRuntime:
                         "metadata",
                     }
                 )
+                for field in SEMANTIC_FIELDS:
+                    changes[field] = getattr(resolved, field)
+                # Semantic registrations often omit process/assignment details.
+                for field in ("pid", "worktree", "branch", "task"):
+                    if changes.get(field) is None:
+                        changes.pop(field, None)
                 changes["metadata"] = {**existing.metadata, **agent.metadata}
                 self.registry.update(agent.id, **changes)
                 self._identity_evidence[agent.id] = StatusEvidence(event.source, event.timestamp)
@@ -78,6 +94,7 @@ class OfficeRuntime:
                     "changes": changes,
                 }
             else:
+                agent = self.semantic_identity.resolve(agent, event.source, event.timestamp)
                 self.registry.add(agent)
                 evidence = StatusEvidence(event.source, event.timestamp)
                 self._status_evidence[agent.id] = evidence
@@ -99,6 +116,7 @@ class OfficeRuntime:
             self.registry.remove(event.agent_id)
             self._status_evidence.pop(event.agent_id, None)
             self._identity_evidence.pop(event.agent_id, None)
+            self.semantic_identity.forget(event.agent_id)
             message = {"type": "agent.stopped", "agent_id": event.agent_id}
         else:
             message = self._apply_update(event)

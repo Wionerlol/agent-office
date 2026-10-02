@@ -1,5 +1,53 @@
 # Agent Office Examples
 
+## GOOD: project-defined Tester subagent
+
+```yaml
+project:
+  name: demo
+  path: .
+agents:
+  - id: tester
+    name: Tester
+    role: tester
+    responsibilities:
+      - Run unit tests
+      - Investigate failures
+```
+
+```bash
+uv run office-run codex --definition tester --parent lead --task "Verify authentication changes"
+```
+
+The server uses the project definition to label this runtime instance Tester. Its definition is `tester`, its parent is `lead`, and its stable role/responsibilities survive activity changes. The wrapper generates a distinct instance ID for each definition-based launch unless `--id` is supplied.
+
+## GOOD: explicit native identity overrides project defaults
+
+An orchestrator posts `agent.started` with `source=native`. Its normalized Agent has `definition_id=tester`, `name=Security Tester`, `role=security`, `responsibilities=[Audit authentication]`, and `parent_agent_id=security-lead`. These explicit fields win over the Tester definition. Omitted fields still receive applicable project defaults.
+
+## GOOD: Backend running pytest
+
+```text
+name = Backend Engineer
+role = backend
+responsibilities = [Own backend interfaces and behavior]
+task = Verify authentication changes
+status = testing
+current_tool = pytest
+```
+
+Role remains backend. A future home zone can depend on role; the current destination still depends on TESTING.
+
+## BAD: tool-derived permanent identity
+
+Do not rename Backend Engineer to Tester or assign `role=tester` because pytest starts. Do not rename it Researcher because it runs rg. Prompts/tasks are not parsed to infer roles.
+
+## GOOD: safe legacy fallback
+
+An unregistered Codex process without semantic metadata retains its generic process name, nullable role/parent/definition, and empty responsibilities. A project declaration alone does not create a character. An explicitly requested unknown definition is retained for diagnostics and does not silently match another definition.
+
+## Completed State Fidelity examples
+
 ## GOOD: stronger activity beats timeout
 
 Current state:

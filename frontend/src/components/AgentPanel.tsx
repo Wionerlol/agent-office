@@ -19,11 +19,18 @@ export function AgentPanel({ agent, events, onClose }: AgentPanelProps) {
         <dt>Provider</dt><dd>{agent.provider}</dd>
         <dt>Role</dt><dd>{agent.role ?? String(agent.metadata.role ?? "—")}</dd>
         <dt>Personality</dt><dd>{String(agent.metadata.personality ?? "Steady")}</dd>
-        <dt>Task</dt><dd>{agent.task ?? "—"}</dd>
+        {Boolean(agent.responsibilities?.length) && <>
+          <dt>Responsibilities</dt>
+          <dd><ul>{agent.responsibilities?.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}</ul></dd>
+        </>}
+        {agent.parent_agent_id && <><dt>Parent Agent</dt><dd>{agent.parent_agent_id}</dd></>}
+        {agent.definition_id && <><dt>Definition</dt><dd>{agent.definition_id}</dd></>}
+        <dt>Current Task</dt><dd>{agent.task ?? "—"}</dd>
+        <dt>Current State</dt><dd>{agent.status}</dd>
         <dt>PID</dt><dd>{agent.pid ?? "—"}</dd>
         <dt>Branch</dt><dd>{agent.branch ?? "—"}</dd>
         <dt>Worktree</dt><dd>{agent.worktree ?? "—"}</dd>
-        <dt>Current tool</dt><dd>{agent.current_tool ?? "—"}</dd>
+        <dt>Current Tool</dt><dd>{agent.current_tool ?? "—"}</dd>
         <dt>Started</dt><dd>{new Date(agent.started_at).toLocaleString()}</dd>
         <dt>Last active</dt><dd>{new Date(agent.last_active_at).toLocaleString()}</dd>
       </dl>
