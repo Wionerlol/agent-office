@@ -67,3 +67,36 @@ def test_live_events_are_not_persisted_to_disk(tmp_path: Path) -> None:
 
     assert response.status_code == 200
     assert not (tmp_path / "runtime" / "events.jsonl").exists()
+
+
+def test_legacy_events_and_incremental_websocket_messages_remain_compatible(tmp_path: Path) -> None:
+    agent = Agent(id="legacy", name="Legacy", provider="test", repository=str(tmp_path))
+    with TestClient(create_app(Settings.for_project(tmp_path))) as client:
+        with client.websocket_connect("/ws") as websocket:
+            assert websocket.receive_json()["type"] == "snapshot"
+            start = {
+                "type": "agent.started",
+                "agent_id": "legacy",
+                "payload": {"agent": agent.model_dump(mode="json")},
+            }
+            assert client.post("/api/events", json=start).status_code == 200
+            assert websocket.receive_json()["type"] == "agent.started"
+            change = {
+                "type": "agent.state_changed",
+                "agent_id": "legacy",
+                "payload": {"to": "testing"},
+            }
+            result = client.post("/api/events", json=change)
+            assert result.status_code == 200
+            assert (
+                websocket.receive_json()
+                == result.json()
+                == {
+                    "type": "agent.updated",
+                    "agent_id": "legacy",
+                    "changes": {"status": "testing"},
+                }
+            )
+            stop = {"type": "agent.stopped", "agent_id": "legacy"}
+            assert client.post("/api/events", json=stop).status_code == 200
+            assert websocket.receive_json() == {"type": "agent.stopped", "agent_id": "legacy"}

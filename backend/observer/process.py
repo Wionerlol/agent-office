@@ -26,11 +26,15 @@ class ProcessObserver:
         self.command_hints = command_hints
 
     def snapshots(self) -> list[ProcessSnapshot]:
-        processes = (
-            [psutil.Process(pid) for pid in self.pids]
-            if self.pids is not None
-            else list(psutil.process_iter())
-        )
+        if self.pids is None:
+            processes = list(psutil.process_iter())
+        else:
+            processes = []
+            for pid in self.pids:
+                try:
+                    processes.append(psutil.Process(pid))
+                except psutil.NoSuchProcess:
+                    continue
         candidates: list[tuple[psutil.Process, list[str], set[str]]] = []
         for process in processes:
             try:
@@ -38,13 +42,9 @@ class ProcessObserver:
             except (psutil.AccessDenied, psutil.NoSuchProcess, psutil.ZombieProcess):
                 continue
             if command:
-                candidates.append(
-                    (process, command, {Path(part).name.lower() for part in command})
-                )
+                candidates.append((process, command, {Path(part).name.lower() for part in command}))
 
-        wrapper_pids = {
-            process.pid for process, _, names in candidates if "office-run" in names
-        }
+        wrapper_pids = {process.pid for process, _, names in candidates if "office-run" in names}
         snapshots: list[ProcessSnapshot] = []
         for process, command, command_names in candidates:
             if self.command_hints and command_names.isdisjoint(self.command_hints):

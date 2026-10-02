@@ -6,7 +6,7 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 
 from backend.config import Settings
-from backend.models import Agent, AgentEvent, AgentEventType, AgentState
+from backend.models import Agent, AgentEvent, AgentEventType, AgentState, EventSource
 from backend.observer.git import GitObserver
 from backend.runtime.emitters import HttpEventEmitter
 
@@ -57,6 +57,7 @@ def run_wrapped(
     )
     emitter(
         AgentEvent(
+            source=EventSource.WRAPPER,
             type=AgentEventType.AGENT_STARTED,
             agent_id=identifier,
             payload={"agent": agent.model_dump(mode="json")},
@@ -64,6 +65,7 @@ def run_wrapped(
     )
     emitter(
         AgentEvent(
+            source=EventSource.WRAPPER,
             type=AgentEventType.STATE_CHANGED,
             agent_id=identifier,
             payload={"from": "starting", "to": "thinking"},
@@ -73,6 +75,7 @@ def run_wrapped(
     if exit_code:
         emitter(
             AgentEvent(
+                source=EventSource.WRAPPER,
                 type=AgentEventType.ERROR,
                 agent_id=identifier,
                 payload={"message": f"Process exited with status {exit_code}"},
@@ -81,12 +84,20 @@ def run_wrapped(
     if not exit_code:
         emitter(
             AgentEvent(
+                source=EventSource.WRAPPER,
                 type=AgentEventType.STATE_CHANGED,
                 agent_id=identifier,
                 payload={"to": "done"},
             )
         )
-    emitter(AgentEvent(type=AgentEventType.AGENT_STOPPED, agent_id=identifier))
+    emitter(
+        AgentEvent(
+            type=AgentEventType.AGENT_STOPPED,
+            agent_id=identifier,
+            source=EventSource.WRAPPER,
+            payload={"pid": process.pid},
+        )
+    )
     return exit_code
 
 

@@ -1,9 +1,11 @@
 import re
 import shlex
+from pathlib import Path
 
 import psutil
 
-from backend.models import AgentEvent, AgentEventType, AgentState
+from backend.adapters.generic import KNOWN_PROVIDERS
+from backend.models import AgentEvent, AgentEventType, AgentState, EventSource
 
 TEST_MARKERS = frozenset(
     {
@@ -71,33 +73,67 @@ class ToolObserver:
         current: dict[int, list[str]] = {}
         try:
             children = psutil.Process(root_pid).children(recursive=True)
-        except (psutil.AccessDenied, psutil.NoSuchProcess):
+        except psutil.AccessDenied:
+            return []
+        except psutil.NoSuchProcess:
             children = []
         for process in children:
             try:
                 command = process.cmdline()
-            except (psutil.AccessDenied, psutil.NoSuchProcess, psutil.ZombieProcess):
+            except psutil.AccessDenied:
+                if process.pid in previous:
+                    current[process.pid] = previous[process.pid]
+                continue
+            except (psutil.NoSuchProcess, psutil.ZombieProcess):
                 continue
             if command:
+                executable = Path(command[0]).name.lower()
+                launcher = Path(command[1]).name.lower() if len(command) > 1 else ""
+                if executable in KNOWN_PROVIDERS or (
+                    executable in {"node", "nodejs"} and launcher in KNOWN_PROVIDERS
+                ):
+                    continue
                 current[process.pid] = command
 
+        def activity_order(command: list[str]) -> int:
+            return {AgentState.TESTING: 2, AgentState.SEARCHING: 1}.get(
+                state_for_command(command), 0
+            )
+
+        representative = max(current.values(), key=activity_order, default=None)
+        next_state = state_for_command(representative) if representative else AgentState.THINKING
+        next_tool = tool_kind(representative) if representative else None
         events = [
             AgentEvent(
-                type=AgentEventType.TOOL_STARTED,
-                agent_id=agent_id,
-                payload={"tool": tool_kind(command), "command": command, "pid": pid},
-            )
-            for pid, command in current.items()
-            if pid not in previous
-        ]
-        events.extend(
-            AgentEvent(
+                source=EventSource.TOOL_PROCESS,
                 type=AgentEventType.TOOL_FINISHED,
                 agent_id=agent_id,
-                payload={"tool": tool_kind(command), "pid": pid},
+                payload={
+                    "tool": tool_kind(command),
+                    "pid": pid,
+                    "next_state": next_state,
+                    "next_tool": next_tool,
+                },
             )
             for pid, command in previous.items()
-            if pid not in current
+            if pid not in current or current[pid] != command
+        ]
+        # Report remaining live activity regardless of incidental child ordering.
+        events.extend(
+            AgentEvent(
+                source=EventSource.TOOL_PROCESS,
+                type=AgentEventType.TOOL_STARTED,
+                agent_id=agent_id,
+                payload={
+                    "tool": tool_kind(command),
+                    "command": command,
+                    "pid": pid,
+                    "next_state": next_state,
+                    "next_tool": next_tool,
+                },
+            )
+            for pid, command in current.items()
+            if pid not in previous or previous[pid] != command
         )
         self._active[agent_id] = current
         return events

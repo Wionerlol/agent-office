@@ -205,3 +205,13 @@ npm run build
 ```
 
 Do not declare completion unless all relevant checks pass.
+
+## Implemented arbitration contract
+
+See Decisions 7–10 for the resolved policy choices. API/default evidence ranks between wrapper and tool_process. Runtime stores status evidence internally through `OfficeRuntime.status_evidence(agent_id)`, separately from registration evidence; Agent and WebSocket schemas remain unchanged.
+
+All status-affecting events reject older observation timestamps. Non-native STARTING/THINKING/IDLE can yield to newer fallback activity; other states require equal or higher source authority. TOOL_PROCESS activity stays protected until completion or a stronger accepted event. Rejected events return empty `agent.updated.changes` and do not broadcast or mutate activity metadata.
+
+Duplicate starts enrich identity without resetting activity. Lifecycle stops accept native/wrapper/API/process sources, check status and registration recency, and check an optional expected PID. Wrapper and process observers provide that PID. Missing discovery or access failures do not establish process death.
+
+ToolObserver supplies optional `next_state` / `next_tool` on child start/finish events to describe all remaining live tools. Existing events without these fields retain their previous behavior. TESTING dominates SEARCHING and other tool activity within a scan. Filesystem observation is deferred.
