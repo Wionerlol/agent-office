@@ -203,3 +203,50 @@ One reusable Tester definition can describe several distinct subagents. The curr
 - Use definition ID as the unique runtime ID for all instances.
 - Treat every OS child executable as an organizational subagent.
 - Add role-specific destinations, an organization chart, or a renderer redesign now.
+
+
+---
+
+## Decision 15: Complete capability discovery before native normalization
+
+**Decision**
+Keep Phase 3A in `backend/probe/`, with explicit capture/experiment/observe commands and checked-in evidence. Do not import it from normal startup, change AgentState/EventSource, normalize into AgentEvent, replace SemanticIdentityResolver, or implement CodexNativeAdapter. State Fidelity and Semantic Agent Model remain complete; Phase 3B is unimplemented.
+
+**Reason**
+Actual sources differ: CLI 0.159.3 and daemon 0.160.0 expose native input waits, edits and subagents, but not continuous thinking/coding or stable roles in these experiments. Tool hosting outside the TUI subprocess tree makes assumed process coverage unreliable. Evidence must precede adapter/domain decisions.
+
+**Rejected Alternatives**
+- Implement a final adapter against assumed/documented events before collecting them.
+- Add states/rooms, role inference or filesystem watchers to make uncertain cases appear supported.
+- Mark unit fixtures/schema presence as native capability verification.
+
+---
+
+## Decision 16: Prefer structured sources and scope daemon observation to an owned thread
+
+**Decision**
+Capture exec JSONL and standalone app-server stdio in controlled runs. For the real DevRouter TUI, connect to the existing local daemon via Unix WebSocket, initialize, verify a selected loaded thread/workspace, then subscribe with thread/resume(excludeTurns=true) without settings/input overrides. Expand scope only through explicit native child identifiers; read child metadata. The observer never answers requests, starts/interrupts turns, loads historical threads or restarts/stops the daemon. Closing it does not imply agent death. The experiment driver alone answers its own fixture question.
+
+**Reason**
+The real path preserves bidirectional native events without scraping terminal text. The control socket needs WebSocket framing, and the observed TUI source was vscode, so CLI source labels alone are not sufficient. Pending requests replay on attach; relationships and request IDs must be preserved for future reconciliation.
+
+**Rejected Alternatives**
+- Parse arbitrary terminal/ANSI output as the main source.
+- Treat app-server proxy as a JSONL socket or assume CLI/daemon versions match.
+- Monitor all sessions, auto-answer another client's request, or use OS PPID as subagent ownership.
+- Treat selected diagnostic workspace matching as a solved production office-ID/native-thread binding.
+
+---
+
+## Decision 17: Persist a bounded content-denying projection rather than raw runtime logs
+
+**Decision**
+Before writing, preserve event discriminators, nested status/item/parent structure, receipt order/timestamps and supplied native timestamp/ordinal. Pseudonymize identifiers consistently. Relativize workspace paths and hide outside paths. Redact text, prompts, tasks, reasoning, arguments, outputs, patches and encrypted content; drop unknown fields including credentials/config/environments/account detail. Retain only bounded executable hints, not shell bodies. Create output exclusively with mode 0600; ignore the entire runtime/probe directory. Publish only reviewed minimal extracts with explicit diagnostic snapshot labels.
+
+**Reason**
+Native payloads mix useful runtime structure with sensitive source/prompt/tool/auth content. A deny-by-default field projection protects content before persistence and still allows waiting/parent/lifecycle correlation. app-server receipt time is not an execution timestamp; missing fields and partial observability must remain honest.
+
+**Rejected Alternatives**
+- Tee raw stdout/stderr or complete runtime payloads to disk and sanitize afterward.
+- Dump environment/config/auth or search unrelated session content.
+- Commit giant logs, replay free text into the frontend, or discard event structure so important null/relationship facts disappear.

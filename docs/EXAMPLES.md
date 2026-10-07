@@ -1,5 +1,19 @@
 # Agent Office Examples
 
+## Phase 3A: inspect native facts before mapping states
+
+GOOD: `item/tool/requestUserInput` plus `waitingOnUserInput` is an explicit user-input wait. Record the native request ID and resolution. Do not normalize it into generic WAITING during the probe phase.
+
+GOOD: native `subAgentActivity.agentThreadId` and child `parentThreadId` establish an organizational child; its agentRole may be null while a project definition still provides Tester responsibilities.
+
+BAD: rename a generated nickname such as Mendel to Reviewer because the requested assignment was review. Task text is not a permanent role; do not parse it into one.
+
+BAD: turn an active thread into definite THINKING, every shell into CODING, or a daemon/process child into a semantic subagent. Native reasoning and patch items provide specific facts with explicit limits.
+
+GOOD: capture a selected structured stream through `uv run python -m backend.probe capture`, or run controlled A–E experiments with `experiment --output-dir runtime/probe/run-01`. Keep debug logs ignored and publish only reviewed sanitized [samples](runtime-probe/SAMPLES.md). Phase 3A is complete; Phase 3B normalization remains unimplemented.
+
+## Completed Semantic Agent Model examples
+
 ## GOOD: project-defined Tester subagent
 
 ```yaml
