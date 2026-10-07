@@ -343,3 +343,63 @@ An unavailable native connection must not leave WAITING/TESTING locked forever, 
 - Leave stale native authority frozen, globally weaken native priority, or change every observer's arbitration.
 - Silently parse future versions, restart the daemon, auto-answer requests, or change TUI configuration.
 - Store raw prompts/output/patches or expose provider-specific frontend events.
+
+---
+
+## Decision 24: Explicit launch identity enables a background binding handshake
+
+**Decision**
+After wrapper registration, office-run can bind using a literal `codex resume UUID`, `--native-thread UUID`, or `AGENT_OFFICE_NATIVE_THREAD_ID`. Literal resume identity and supplied identity must agree. Pass the exact Office started_at generation to the bind API, retry the same handshake for at most 30 seconds in the background, and cancel on wrapper exit. Disabled native integration does nothing. Consume the wrapper's leading `--` delimiter so the installed DevRouter command launches the intended Codex subcommand. A fresh TUI, picker, session name, --last or ambiguous arguments remain unbound; use `agent-office native bind AGENT UUID` when an explicit operator step is needed.
+
+**Reason**
+Installed CLI 0.160.0 / daemon 0.161.0 and DevRouter were inspected. Thread metadata exposes originator/session/source classifications, not an Office-owned launch nonce. Environment identity does not become a structured thread field. Consumer-owned thread creation or injected TUI configuration would change the read-only boundary. A launcher-known resume UUID is genuine explicit evidence and works through both paths without manual HTTP.
+
+**Rejected Alternatives**
+- Newest/only thread, repository, PID proximity, terminal scraping or guessed nonce metadata.
+- Claim fresh-session automatic discovery without native evidence.
+- Block or fail ordinary Codex execution when Agent Office is unavailable.
+
+---
+
+## Decision 25: Native failures follow logical thread ownership
+
+**Decision**
+Retain the existing connection per root with its confirmed children; do not add a socket per child. Catch selected-thread parsing, hydration, subscription/read rejection, binding and catch-up failures at the affected thread. Release only that thread's activity evidence, preserve siblings/root, and retry bounded structural reconstruction on the same connection. Failed child discovery retains a bounded structural delegation fact without manufacturing a child. Root read failure also leaves already-known children observable. Malformed transport envelopes, socket loss, request timeout and unsupported handshake are connection-level boundaries for that root's connection; unrelated roots continue independently. Child CLI reconnect schedules only child reconstruction. Backlog limits are 128 queued facts per thread, 512 per root connection, and at most 1,024 pending child retries.
+
+**Reason**
+A rejected child read does not prove transport loss or agent death. Distinguishing these boundaries prevents a child from freezing the whole office while preserving the v1 source-release, recency, terminal and semantic contracts. Bounded retries avoid uncontrolled memory/history growth.
+
+**Rejected Alternatives**
+- Whole-provider degradation after every child exception.
+- A WebSocket per child or automatic daemon restart.
+- Broadly weakening provenance to make fallback appear usable.
+
+---
+
+## Decision 26: Reviewed capability profiles gate experimental protocols
+
+**Decision**
+Centralize exact versions, schema family, read RPCs, fact methods, item types and thread/turn discriminators in ProtocolProfile. The reviewed paginated profile covers 0.159.3, 0.160.0, 0.160.1 and newly reviewed 0.161.0. Unknown versions and initialize/discovery disagreement fail closed. Compatibility validation uses only discovery/initialize and, when explicitly selected, loaded-thread reads/subscription and paginated structural shape checks; it never starts turns, answers requests or overrides configuration. Unknown versions report review_required without opening a production transport.
+
+**Reason**
+The locally installed daemon upgraded to 0.161.0 independently of this work. Its generated Thread/ThreadStatus/Turn/ThreadItem/ThreadItemEntry/SubAgentActivityKind definitions match reviewed 0.160.1 schemas. Actual read-only handshake/read RPC and controlled TUI/DevRouter smoke validate the consumed subset. This supports a deliberate exact addition, not an open-ended version range or universal schema guarantee.
+
+**Rejected Alternatives**
+- Lexicographic/minimum-version gates, silently accepting future schemas or model calls as compatibility probes.
+- Scattered per-event version checks.
+- Changing/downgrading the shared daemon to hide compatibility failures.
+
+---
+
+## Decision 27: Local integration health stays separate from AgentState
+
+**Decision**
+GET /api/native/codex reports provider, discovered version, protocol status, aggregate integration health, per-binding health/fallback/category/scope/type, unbound Office IDs, bounded unbound-child failures and the latest categorical bind failure. Health is disabled/unbound/connecting/connected/reconnecting/degraded/unsupported/unavailable/inactive; it is not AgentState. CLI status/bind/reconnect uses loopback HTTP only; validate talks to the existing local daemon read-only. Native IDs remain developer control-plane information and are not added to Agent/frontend models. Error text, prompts, questions, reasoning, arguments, output and patches never enter diagnostics. Keep the expected server default 127.0.0.1; no authentication system or normal UI redesign is introduced.
+
+**Reason**
+Operators need to distinguish observer failure from agent activity, see whether fallback is in use and inspect exact binding ownership. Backend diagnostics and a small CLI provide this without provider logic in OfficeScene or exposing native content in normal UI.
+
+**Rejected Alternatives**
+- New AgentState values for connection health.
+- Raw exception/native content in API errors, permanent probe logging or UUID labels on characters.
+- New LAN/public native control surfaces.

@@ -282,3 +282,11 @@ All status-affecting events reject older observation timestamps. Non-native STAR
 Duplicate starts enrich identity without resetting activity. Lifecycle stops accept native/wrapper/API/process sources, check status and registration recency, and check an optional expected PID. Wrapper and process observers provide that PID. Missing discovery or access failures do not establish process death.
 
 ToolObserver supplies optional `next_state` / `next_tool` on child start/finish events to describe all remaining live tools. Existing events without these fields retain their previous behavior. TESTING dominates SEARCHING and other tool activity within a scan. Filesystem observation is deferred.
+
+## Phase 3B v1.1 operational contract
+
+Preserve Decisions 1–23 and the native normalization architecture. Decisions 24–27 define explicit launch binding, failure boundaries, reviewed protocol profiles and developer health. office-run uses literal resume UUID or explicitly supplied --native-thread / AGENT_OFFICE_NATIVE_THREAD_ID after registration; it never searches by repository, PID, newest/only session, prompt or terminal. Generation-aware background retries are bounded and cancel on exit. DevRouter's wrapper delimiter is consumed before forwarding Codex arguments. Ambiguous/fresh/picker launches remain unbound.
+
+`agent-office native status|bind|reconnect|validate` provides local operator workflows. Bind adds optional expected_generation to the existing API; new clients always supply it. GET /api/native/codex adds protocol/health and per-binding fallback/failure category/scope/type. Thread IDs stay in developer diagnostics, not frontend models. Keep loopback as the expected server default.
+
+Reviewed profiles centralize version/RPC/fact/item/discriminator assumptions; exact 0.161.0 joins previously reviewed versions after local schema and runtime review. Unknown versions fail closed; validation never starts turns or answers native requests. Selected-thread read/parsing/hydration/backlog errors degrade and release only that thread; typed connection loss/timeout/unsupported handshake affects its root connection. Existing one-root-plus-children multiplexing is retained, with bounded retries and no socket per child. See NATIVE_RUNTIME.md for limits, health contract and real evidence.

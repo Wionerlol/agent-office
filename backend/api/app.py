@@ -26,6 +26,7 @@ class NativeBindRequest(BaseModel):
     office_agent_id: str = Field(min_length=1, max_length=200)
     thread_id: str = Field(min_length=1, max_length=200)
     child_definition_id: str | None = Field(default=None, min_length=1, max_length=200)
+    expected_generation: str | None = Field(default=None, min_length=1, max_length=100)
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -118,6 +119,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 request.office_agent_id,
                 request.thread_id,
                 request.child_definition_id,
+                request.expected_generation,
             )
             return {"office_agent_id": binding.office_agent_id, "thread_id": binding.thread_id}
         except KeyError:

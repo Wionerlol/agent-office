@@ -841,7 +841,7 @@ async def test_unknown_version_does_not_open_transport(tmp_path: Path) -> None:
         pass
 
     with pytest.raises(NativeUnavailable, match="Unsupported"):
-        async with ReadOnlyClient(tmp_path / "not-present", "0.161.0", ignore):
+        async with ReadOnlyClient(tmp_path / "not-present", "99.0.0", ignore):
             pass
 
 

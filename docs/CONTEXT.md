@@ -101,3 +101,9 @@ Installed CLI is now 0.160.0 and shared daemon 0.160.1. Controlled real smoke us
 A freshly created native thread without a first persisted turn can lack a resumable rollout despite metadata reporting idle. The controlled fixture first runs a read-only turn before TUI attach. This is not a reason to guess another native thread. Ordinary DevRouter still does not supply a native UUID; explicit handshake remains necessary. Source unavailability releases activity evidence, and the private ToolObserver snapshot prevents native completion from dropping a still-running fallback test.
 
 Next work should improve explicit launcher/DevRouter binding ergonomics, validate upgrades before widening compatibility, isolate per-thread failures, and harden long-running reconnect/reuse. No claim of universal thinking, approval waiting, remote MCP, task inference or child-result transfer is introduced.
+
+## Phase 3B v1.1 integration hardening
+
+Direct office-run and actual DevRouter literal-resume launches now supply a generation-aware background bind handshake. Fresh sessions still lack deterministic launch correlation; use the explicit native CLI when a known UUID is available. Installed CLI remains 0.160.0; daemon independently upgraded to 0.161.0. Its consumed schema definitions were reviewed against 0.160.1 before adding an exact profile; controlled read-only validation and owned real smoke cover both launch paths. No installed DevRouter files or daemon settings were changed.
+
+Integration health is separate from AgentState. Thread failures release only that thread, retry snapshots on the same root socket and preserve other roots/siblings. Transport errors still affect the root connection's owned scope. Current native CLI commands replace normal curl use and reject non-loopback HTTP endpoints. All deterministic tests run in the required Backend/Frontend CI; native model/daemon smoke remains local evidence.
