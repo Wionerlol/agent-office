@@ -47,6 +47,8 @@ class Agent(BaseModel):
     parent_agent_id: str | None = None
     definition_id: str | None = None
     current_tool: str | None = None
+    waiting_reason: str | None = None
+    waiting_on_agent_id: str | None = None
     changed_files: list[str] = Field(default_factory=list)
     started_at: datetime = Field(default_factory=utc_now)
     last_active_at: datetime = Field(default_factory=utc_now)

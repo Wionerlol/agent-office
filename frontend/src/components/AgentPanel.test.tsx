@@ -47,3 +47,22 @@ describe("AgentPanel semantic identity", () => {
     expect(screen.getByText("Current State").nextElementSibling).toHaveTextContent("testing");
   });
 });
+
+describe("AgentPanel waiting context", () => {
+  it("distinguishes user input from idle and hides cleared context", () => {
+    const agent: Agent = { ...legacy, status: "waiting", waiting_reason: "user_input" };
+    const { rerender } = render(<AgentPanel agent={agent} events={[]} onClose={() => undefined} />);
+    expect(screen.getByText("Waiting for user input")).toBeInTheDocument();
+    rerender(<AgentPanel agent={{ ...agent, status: "idle", waiting_reason: null }}
+      events={[]} onClose={() => undefined} />);
+    expect(screen.queryByText("Waiting reason")).not.toBeInTheDocument();
+    expect(screen.getByText("Current State").nextElementSibling).toHaveTextContent("idle");
+  });
+
+  it("renders a deterministic child wait through normalized fields", () => {
+    render(<AgentPanel agent={{ ...legacy, status: "waiting", waiting_reason: "child_agent",
+      waiting_on_agent_id: "tester-child" }} events={[]} onClose={() => undefined} />);
+    expect(screen.getByText("Waiting for child agent")).toBeInTheDocument();
+    expect(screen.getByText("Waiting on Agent").nextElementSibling).toHaveTextContent("tester-child");
+  });
+});

@@ -7,7 +7,21 @@
 | 1 State Fidelity | COMPLETE |
 | 2 Semantic Agent Model | COMPLETE |
 | 3A Native Runtime Capability Probe | COMPLETE |
-| 3B Native Adapter | NOT YET IMPLEMENTED |
+| 3B Native Adapter v1 | COMPLETE |
+
+## Native Runtime v1 contract
+
+The normative Phase 3B contract is [NATIVE_RUNTIME.md](NATIVE_RUNTIME.md), with Decisions 18–23. `backend/native/codex/` owns versioned read-only transport, explicit bindings and bounded structural snapshot reconciliation; `backend/adapters/codex_native.py` normalizes facts into OfficeRuntime. Production does not import the probe, persist raw payloads, or change OfficeScene routing.
+
+Agent adds nullable `waiting_reason` and `waiting_on_agent_id`. Native user input produces WAITING/user_input, independently of idle. Only one deterministic mapped immediate child permits WAITING/child_agent. State updates apply context/tool changes atomically through provenance arbitration and clear waiting context on leaving WAITING. No top-level states or WebSocket message types change.
+
+Native nickname is metadata plus a generated fallback name; SemanticIdentityResolver gives that name fallback authority, preserving stronger definitions and authoritative non-generated native identity. Null roles remain absent evidence. Native child identity is stable per thread, with explicit parent, successful DONE/failed ERROR, and terminal grace before cleanup.
+
+Native activity aggregates waits, commands and file changes centrally. Specific native evidence outranks fallback; a baseline after completion or disconnect explicitly releases evidence. OfficeRuntime remembers the private latest ToolObserver aggregate without changing rejected-event behavior; it restores a still-active fallback with its source tier. Delayed newer tool snapshots may reconcile a restored handoff at its timestamp floor without rewinding recency; ordinary stale status events still fail. Legacy native evidence without release retains its historical protection.
+
+Opt-in configuration defaults disabled. Explicit POST `/api/native/codex/bind` requires Office ID plus native UUID; workspace only validates. GET `/api/native/codex` reports scoped bindings/version/failure class; POST `/api/native/codex/reconnect/{agent_id}` closes/reconnects only observation. Exact compatible daemon profiles: 0.159.3, 0.160.0, 0.160.1, with discovery/initialize agreement. Unknown versions and source loss safely fall back; no automatic DevRouter UUID discovery is claimed.
+
+The Phase 3A diagnostic contract below remains intact and historical: its exclusions apply to the probe, while the separate Phase 3B adapter is now explicitly authorized.
 
 `backend/probe/` provides opt-in capture, experiment and selected-thread observe commands. It has no live startup hook, API endpoint, frontend protocol, AgentState addition or AgentEvent normalization. It does not replace EventSource, status arbitration, SemanticIdentityResolver, definitions or current OfficeScene routing.
 

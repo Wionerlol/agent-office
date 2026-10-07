@@ -29,6 +29,8 @@ export interface Agent {
   parent_agent_id?: string | null;
   definition_id?: string | null;
   current_tool: string | null;
+  waiting_reason?: string | null;
+  waiting_on_agent_id?: string | null;
   changed_files: string[];
   started_at: string;
   last_active_at: string;

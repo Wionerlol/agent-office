@@ -23,6 +23,8 @@ LIFECYCLE_SOURCES = {EventSource.NATIVE, EventSource.WRAPPER, EventSource.API, E
 class StatusEvidence:
     source: EventSource
     observed_at: datetime
+    released: bool = False
+    restored_fallback: bool = False
 
 
 def accepts_status(
@@ -33,6 +35,8 @@ def accepts_status(
 ) -> bool:
     if timestamp < evidence.observed_at:
         return False
+    if evidence.released:
+        return True
     # Baseline states describe absence of specific activity. Native facts remain explicit.
     if current in BASELINE_STATES and evidence.source is not EventSource.NATIVE:
         return True

@@ -8,9 +8,12 @@ from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
 
 from backend.config import OfficeSettings, Settings
 from backend.models import Agent, AgentEvent, CodexUsage, ProjectInfo
+from backend.native.codex.bindings import BindingConflict
+from backend.native.codex.consumer import CodexNativeConsumer
 from backend.observer.codex_usage import CodexUsageMonitor
 from backend.observer.git import GitObserver
 from backend.observer.manager import ObserverManager
@@ -19,17 +22,25 @@ from backend.state.engine import StateTransitionError
 from backend.state.identity import AgentDefinitionRegistry
 
 
+class NativeBindRequest(BaseModel):
+    office_agent_id: str = Field(min_length=1, max_length=200)
+    thread_id: str = Field(min_length=1, max_length=200)
+    child_definition_id: str | None = Field(default=None, min_length=1, max_length=200)
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or Settings.load()
     runtime = OfficeRuntime(definitions=AgentDefinitionRegistry(settings))
     observer = ObserverManager(runtime, settings.observer)
     usage_monitor = CodexUsageMonitor.from_environment()
+    native = CodexNativeConsumer(runtime, settings.native.codex)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         if settings.observer.enabled:
             observer.start()
         yield
+        await native.stop()
         await observer.stop()
 
     app = FastAPI(title="Agent Office", version="0.1.0", lifespan=lifespan)
@@ -37,6 +48,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.runtime = runtime
     app.state.observer = observer
     app.state.usage_monitor = usage_monitor
+    app.state.native = native
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[
@@ -94,6 +106,34 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise HTTPException(status_code=409, detail=str(error)) from error
         except ValueError as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
+
+    @app.get("/api/native/codex")
+    async def native_status() -> dict[str, object]:
+        return native.status()
+
+    @app.post("/api/native/codex/bind")
+    async def native_bind(request: NativeBindRequest) -> dict[str, object]:
+        try:
+            binding = await native.bind(
+                request.office_agent_id,
+                request.thread_id,
+                request.child_definition_id,
+            )
+            return {"office_agent_id": binding.office_agent_id, "thread_id": binding.thread_id}
+        except KeyError:
+            raise HTTPException(404, "Office Agent not registered") from None
+        except BindingConflict as error:
+            raise HTTPException(409, str(error)) from None
+        except Exception:
+            raise HTTPException(503, "Native source unavailable or unsupported") from None
+
+    @app.post("/api/native/codex/reconnect/{agent_id}")
+    async def native_reconnect(agent_id: str) -> dict[str, str]:
+        try:
+            await native.reconnect(agent_id)
+        except KeyError:
+            raise HTTPException(404, "Office Agent not bound") from None
+        return {"status": "reconnecting"}
 
     @app.websocket("/ws")
     async def websocket_endpoint(websocket: WebSocket) -> None:

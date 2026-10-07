@@ -84,13 +84,18 @@ class SemanticIdentityResolver:
         values: dict[str, Any] = {}
         for field in SEMANTIC_FIELDS:
             value = getattr(incoming, field)
+            field_authority = (
+                IdentityAuthority.PROCESS
+                if field == "name" and incoming.metadata.get("name_is_generated") is True
+                else authority
+            )
             if value:
                 previous = evidence.get(field)
                 if previous is None or (
-                    authority >= previous.authority and timestamp >= previous.observed_at
+                    field_authority >= previous.authority and timestamp >= previous.observed_at
                 ):
                     values[field] = value
-                    evidence[field] = IdentityEvidence(authority, timestamp)
+                    evidence[field] = IdentityEvidence(field_authority, timestamp)
 
         candidate = (current or incoming).model_copy(update=values)
         definition = self.definitions.match(candidate)

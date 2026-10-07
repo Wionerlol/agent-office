@@ -1,5 +1,46 @@
 # Agent Office Acceptance Criteria
 
+## Phase 3B Native Runtime Adapter v1 — COMPLETE
+
+- Explicit registered Office ID/native UUID binding, loaded-thread workspace validation, conflict/generation rejection, sticky reconnect and child binding are covered. CWD-only identity is rejected.
+- Production consumes only version-gated local structured sources through CodexNativeAdapter → OfficeRuntime. It never answers, approves, starts/interrupts turns, changes TUI settings, restarts the daemon or imports the probe. Disabled/unavailable/unsupported native integration leaves existing behavior operational.
+- Bounded replay keys, request correlation, retired turns and completed items protect idempotence. Snapshot reconstruction restores live activity; terminal cleanup retains binding tombstones.
+- Native input waiting yields WAITING/user_input; idle cannot cancel a pending request, and resolution clears context. Single deterministic child wait is supported; empty/multiple recipients remain partial.
+- Confirmed native children have stable Office identity, native parent relationship, project semantics stronger than nickname/null role, independent lifecycle, terminal presentation and cleanup.
+- Native command classification and file activity aggregate concurrent work; a file completion cannot interrupt native testing or lose a still-active fallback test. Nonzero command exit is preserved without whole-agent ERROR. Failed patch does not claim a changed file.
+- Waiting fields are additive in HTTP/WebSocket snapshots/updates and visible in AgentPanel. OfficeScene remains unchanged. No filesystem watcher, NLP, org chart, new state, prompt/output display or raw production logging is added.
+
+### Automated verification (2026-10-08 Asia/Singapore)
+
+- `uv run pytest -q`: **178 passed**, including **38 native contract tests** plus all 140 prior regressions; two existing Starlette/httpx/anyio deprecation warnings.
+- `uv run ruff check backend main.py`: passed.
+- `cd frontend && npm test -- --reporter=dot`: **29 passed / 12 files**.
+- `cd frontend && npm run lint`: passed.
+- `cd frontend && npm run build`: passed.
+- `git diff --check`: passed.
+
+Native tests include isolated Unix WebSocket negotiation/read-only controls, version mismatch, malformed/unavailable sources, explicit binding, replay, waiting, definition/nickname precedence, concurrency, snapshots/privacy, child recovery and parent exit. They are deterministic contracts, not provider capability verification. Existing State Fidelity real-process/fallback tests remain in the full suite.
+
+### Real runtime smoke
+
+Controlled disposable repositories exercised actual daemon **0.160.1** with CLI/TUI **0.160.0**, known thread UUIDs and real office-run registration. A separately owned diagnostic driver created fixture turns and supplied fixture answers; production consumers never controlled or answered the TUI. A first read-only turn materialized the native rollout before explicit TUI resume. The production binding API and consumer then observed:
+
+1. Known Office `smoke-lead` bound to the selected native UUID and connected successfully.
+2. Actual apply_patch changed calc.py from 41 to 42; native fileChange drove CODING and successful changed_files. The resulting file was independently checked.
+3. Actual rg, shell printf and pytest completed successfully; normalized SEARCHING/TESTING/tool activity and native exit codes were observed.
+4. Plan requestUserInput drove WAITING/user_input. Reconnecting while pending restored the same wait; resolution recovered without a new agent.
+5. Actual subagent spawn created exactly one child Office Agent, with parent_agent_id=smoke-lead. Generated native nicknames differed between controlled runs; explicit child_definition_id=tester retained visible Tester, role tester and Run tests responsibilities. Actual native role was null.
+6. Reconnect during child work produced no duplicate agent. Actual child completion displayed DONE before removal after three seconds.
+7. Closing native observation and injecting discovery unavailability left the Office alive. A normalized ToolObserver fallback update drove TESTING; HTTP and WebSocket remained available. Chromium loaded the real production frontend, rendered one canvas, received a one-agent snapshot and reported no page errors under that disconnected condition.
+
+Reviewed structural samples and final run details are in [NATIVE_RUNTIME.md](NATIVE_RUNTIME.md). Full logs/manifests/helpers remain ignored under runtime/probe. The real-browser disconnect checks use actual native smoke servers; a separate normalized fixture screenshot [native-waiting-details.png](images/native-waiting-details.png) verifies AgentPanel waiting/identity presentation, not provider capability.
+
+Failed smoke startup attempts used an incorrect wrapper argument separator, tried resuming a fresh thread without a rollout, or reused a disposable tmux name before shutdown completed. These were fixture failures, corrected with proper arguments, an initial persisted turn and a unique owned socket. They are not passing evidence. An early native test expected a released baseline when a live fallback existed; the deliberate restored-fallback policy changed the expectation to immediately restored TESTING with ToolObserver provenance. No old regression assertion was removed or weakened.
+
+Supported exact protocol profiles are 0.159.3/0.160.0/0.160.1; **only 0.160.1 has this production live smoke**. Prior profiles rely on Phase 3A evidence and reviewed schemas. Normal conversational/approval waits, multiple/empty child recipients, remote MCP semantics, stable native roles, continuous THINKING and natural-language result/task semantics remain unverified/partial. Long-running repeated reuse and oversize catch-up need broader future validation. See [the contract/limits](NATIVE_RUNTIME.md).
+
+Phase 1 COMPLETE; Phase 2 COMPLETE; Phase 3A COMPLETE; Phase 3B v1 COMPLETE. Phase 3B v2 / Phase 4 NOT YET IMPLEMENTED.
+
 ## Completed Phase 3A Native Runtime Capability Probe
 
 - Repeatable real Codex structured capture and selected-thread observing are opt-in and isolated.

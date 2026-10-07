@@ -250,3 +250,96 @@ Native payloads mix useful runtime structure with sensitive source/prompt/tool/a
 - Tee raw stdout/stderr or complete runtime payloads to disk and sanitize afterward.
 - Dump environment/config/auth or search unrelated session content.
 - Commit giant logs, replay free text into the frontend, or discard event structure so important null/relationship facts disappear.
+
+
+---
+
+## Decision 18: Bind Office identity to native thread explicitly and retain session ownership
+
+**Decision**
+Use a runtime-local one-to-one NativeThreadBinding registry and explicit bind API. Require an existing Codex Office ID, a supplied native thread ID, already-loaded metadata and matching repository/worktree. Repository is validation only. Matching retries are idempotent; conflicts fail. Store the Office generation, native parent/root identity and completed-child tombstones, bounded to 1,024 records without silent eviction. Reconnect preserves bindings; restart requires a new handshake. Ordinary DevRouter does not supply a reliable native UUID, so v1 requires the explicit API rather than pretending automatic binding exists.
+
+**Reason**
+Several agents can share a repository. Native identity and lifetime must not jump based on CWD or inherited process relationships. A small explicit handshake fits the installed daemon and avoids modifying external DevRouter or scraping its terminal.
+
+**Rejected Alternatives**
+- Choose the only/most recent thread for a repository or scan terminal UUID text.
+- Equate Office IDs, native session IDs and OS PIDs.
+- Evict/rebind identities silently or add database persistence.
+
+---
+
+## Decision 19: Bound idempotence and reconstruct structural activity on reconnect
+
+**Decision**
+Deduplicate thread/turn/item/request/fact/phase/child keys with bounded LRUs. Correlate resolution to the request turn/item; maintain completed-item and retired-turn tombstones. Replayed pending requests may reconstruct lost waiting without duplicate display updates. Status notifications deduplicate derived values. Initial subscription reconciles the latest turn; reconnect catches up to its checkpoint within 32 turns and 800 items/turn. Project history into structural facts, not stored content. Completed unbound historical children are not newly displayed. Overflow/unavailable structure releases native activity and degrades to fallbacks.
+
+**Reason**
+Phase 3A observed pending-request replay. Event dedup alone cannot restore missed completion or current waiting after disconnect, while unbounded history and tombstones would turn this into a general event-sourcing system.
+
+**Rejected Alternatives**
+- Rely on last-writer-wins or reconnect as fresh agent registration.
+- Cache every status value forever, suppressing later legitimate idle/active changes.
+- Persist raw logs/database state or hydrate arbitrary/all user threads.
+
+---
+
+## Decision 20: Keep WAITING and add explicit waiting context
+
+**Decision**
+Add waiting_reason and waiting_on_agent_id with None defaults. Confirmed user request/flag produces WAITING/user_input; idle is separate and cannot cancel a pending request. Resolution/turn termination clears context. Only a native wait naming exactly one mapped, live immediate child produces child_agent plus its Office ID. Empty/multiple recipients and merely having active children do not establish waiting-on-child. AgentPanel displays normalized context; OfficeScene stays unchanged.
+
+**Reason**
+The developer needs to distinguish a suspended input decision from a completed/idle turn. Phase 3A did not establish universal child-wait flags, so uncertainty must remain explicit.
+
+**Rejected Alternatives**
+- Add many top-level waiting states or collapse input waiting into idle.
+- Assume all parent/child relationships imply a blocked parent.
+- Let the monitoring connection answer or approve requests.
+
+---
+
+## Decision 21: Generated native nicknames are fallback names, not organizational definitions
+
+**Decision**
+Store native_nickname and mark the incoming name generated; SemanticIdentityResolver assigns generated names fallback authority. Non-generated authoritative native semantic fields retain their existing highest tier. A bind request may explicitly select a project child_definition_id; do not infer it from role/task/prompt/tool text. Null native roles never erase project role/responsibilities. Native child identity uses a stable thread hash and native parent evidence, independent of PID.
+
+**Reason**
+Actual names such as Averroes/Dirac/Galileo do not describe stable Tester responsibilities, and actual native roles were null. Project semantics must remain useful without pretending generated names are authoritative organizational assignments.
+
+**Rejected Alternatives**
+- Let generated nickname automatically replace Tester or rename a child Reviewer from its prompt.
+- Bypass the resolver, remove definitions, or use OS subprocesses as subagents.
+- Fabricate child result text or treat activity completion alone as proof of success.
+
+---
+
+## Decision 22: Aggregate native activities centrally and preserve independent lifecycle
+
+**Decision**
+Use one per-thread activity policy: explicit terminal outcome; user input; one deterministic child wait; testing; searching; file change; generic command; confirmed idle or released baseline. Reasoning is diagnostic-only in v1. Command labels reuse existing classification, not native state names. Completion removes only its own activity; nonzero command exit is metadata, not whole-agent ERROR. Only successful file completion adds scoped paths. Successful child turn becomes DONE, failure ERROR, then configurable grace/stop; fresh confirmed child turns can retain/reopen the same identity. Known children continue after parent removal; replay never recreates a completed child without new active-turn evidence.
+
+**Reason**
+Concurrent command/file completion must not interrupt tests. Native reasoning coverage and child result delivery are incomplete. Lifecycle independence preserves real child work without a complex organizational tree.
+
+**Rejected Alternatives**
+- Reset THINKING after every individual completion or mark the whole agent ERROR for every failed command.
+- Treat reasoning items as complete model-phase coverage or add filesystem CODING/NLP.
+- Immediately remove children, revive historical completed agents, or cascade child death from parent exit.
+
+---
+
+## Decision 23: Read-only exact-version consumer releases evidence into existing fallback arbitration
+
+**Decision**
+Use a separate production Unix WebSocket consumer with exact reviewed app-server profiles 0.159.3/0.160.0/0.160.1 and discovery/initialize version agreement. Permit only metadata reads, structural pagination and loaded-thread resume without configuration overrides. Unknown versions fail closed. Declare the already-transitive WebSocket library as a direct dependency without a locked-version upgrade. Production never imports the probe or persists raw payloads.
+
+An explicit native release supplements Decision 8: when no specific native activity remains or the consumer disconnects, native baseline authority may yield without falsely stopping the agent. OfficeRuntime retains private ToolObserver aggregate facts even when their display is rejected. Release restores a still-active fallback with its original source tier; finished tools are not revived. A newer tool snapshot delayed across that handoff reconciles at its timestamp floor, without rewinding status/active time. This narrow reconciliation does not permit older ordinary state events to overwrite newer evidence. Terminal states retain protection, and repeated outage retries do not refresh idle time. Legacy native events without release retain the original policy.
+
+**Reason**
+An unavailable native connection must not leave WAITING/TESTING locked forever, and removing native activity must not lose an independently running fallback test. Experimental protocol upgrades need evidence and an explicit compatibility boundary. The consumer must enrich OfficeRuntime rather than bypass it or control the user's TUI.
+
+**Rejected Alternatives**
+- Leave stale native authority frozen, globally weaken native priority, or change every observer's arbitration.
+- Silently parse future versions, restart the daemon, auto-answer requests, or change TUI configuration.
+- Store raw prompts/output/patches or expose provider-specific frontend events.
