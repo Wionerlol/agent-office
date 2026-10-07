@@ -1,5 +1,19 @@
 # Agent Office Examples
 
+## Phase 3B native normalization
+
+GOOD: explicitly bind Office `lead` to a known native UUID. A second agent in the same repository stays unbound unless its own UUID is supplied. Repository matching alone must never select a thread.
+
+GOOD: native nickname Gibbs plus explicit child_definition_id=tester yields visible Tester, role tester, responsibilities from the project, and parent_agent_id=lead. Native nickname remains metadata and null role erases nothing.
+
+GOOD: requestUserInput produces WAITING with waiting_reason=user_input. An idle notification does not erase the request; resolution clears context. Replayed requests reconstruct an existing wait without duplicate child registration or repeated unchanged display.
+
+GOOD: native pytest remains TESTING while a file change begins/ends. Only completing the last active operation returns to the surrounding baseline. A live process fallback test is restored when the native operation releases its evidence.
+
+BAD: every parent with an active child becomes WAITING, native idle becomes waiting for a user, or reasoning absence becomes proof that the model is not thinking. Empty native wait recipients remain partial evidence.
+
+GOOD: unsupported daemon version/disconnect leaves wrapper/process behavior operational. Production closes only its observation socket and does not answer a user request, restart a daemon, expose prompts, or mark an agent dead because observation was lost.
+
 ## Phase 3A: inspect native facts before mapping states
 
 GOOD: `item/tool/requestUserInput` plus `waitingOnUserInput` is an explicit user-input wait. Record the native request ID and resolution. Do not normalize it into generic WAITING during the probe phase.
@@ -10,7 +24,7 @@ BAD: rename a generated nickname such as Mendel to Reviewer because the requeste
 
 BAD: turn an active thread into definite THINKING, every shell into CODING, or a daemon/process child into a semantic subagent. Native reasoning and patch items provide specific facts with explicit limits.
 
-GOOD: capture a selected structured stream through `uv run python -m backend.probe capture`, or run controlled A–E experiments with `experiment --output-dir runtime/probe/run-01`. Keep debug logs ignored and publish only reviewed sanitized [samples](runtime-probe/SAMPLES.md). Phase 3A is complete; Phase 3B normalization remains unimplemented.
+GOOD: capture a selected structured stream through `uv run python -m backend.probe capture`, or run controlled A–E experiments with `experiment --output-dir runtime/probe/run-01`. Keep debug logs ignored and publish only reviewed sanitized [samples](runtime-probe/SAMPLES.md). Phase 3A is complete; Phase 3B normalization is described separately in NATIVE_RUNTIME.md.
 
 ## Completed Semantic Agent Model examples
 

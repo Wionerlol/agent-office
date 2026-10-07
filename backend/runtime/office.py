@@ -11,6 +11,7 @@ from backend.state.identity import (
     SemanticIdentityResolver,
 )
 from backend.state.provenance import (
+    BASELINE_STATES,
     SOURCE_PRIORITY,
     StatusEvidence,
     accepts_status,
@@ -35,6 +36,7 @@ class OfficeRuntime:
         self._status_evidence: dict[str, StatusEvidence] = {}
         self._identity_evidence: dict[str, StatusEvidence] = {}
         self.semantic_identity = SemanticIdentityResolver(definitions)
+        self._fallback_tools: dict[str, tuple[StatusEvidence, AgentState, str | None]] = {}
 
     def status_evidence(self, agent_id: str) -> StatusEvidence:
         agent = self.registry.get(agent_id)
@@ -75,6 +77,8 @@ class OfficeRuntime:
                         "last_active_at",
                         "started_at",
                         "current_tool",
+                        "waiting_reason",
+                        "waiting_on_agent_id",
                         "changed_files",
                         "metadata",
                     }
@@ -117,6 +121,7 @@ class OfficeRuntime:
             self._status_evidence.pop(event.agent_id, None)
             self._identity_evidence.pop(event.agent_id, None)
             self.semantic_identity.forget(event.agent_id)
+            self._fallback_tools.pop(event.agent_id, None)
             message = {"type": "agent.stopped", "agent_id": event.agent_id}
         else:
             message = self._apply_update(event)
@@ -127,6 +132,37 @@ class OfficeRuntime:
 
     def _apply_update(self, event: AgentEvent) -> dict[str, Any]:
         current = self.registry.get(event.agent_id)
+        fallback_observed = False
+        reconciled_snapshot = False
+        if (
+            current.status not in {AgentState.DONE, AgentState.ERROR, AgentState.OFFLINE}
+            and event.source is EventSource.TOOL_PROCESS
+            and event.type
+            in {
+                AgentEventType.TOOL_STARTED,
+                AgentEventType.TOOL_FINISHED,
+            }
+        ):
+            previous = self._fallback_tools.get(event.agent_id)
+            if previous is None or event.timestamp >= previous[0].observed_at:
+                fallback_observed = True
+                command = event.payload.get("command") or event.payload.get("tool") or ""
+                if not isinstance(command, str) and not (
+                    isinstance(command, list) and all(isinstance(part, str) for part in command)
+                ):
+                    command = str(command)
+                fallback_state = event.payload.get("next_state") or (
+                    state_for_command(command)
+                    if event.type is AgentEventType.TOOL_STARTED
+                    else AgentState.THINKING
+                )
+                self._fallback_tools[event.agent_id] = (
+                    StatusEvidence(event.source, event.timestamp),
+                    AgentState(fallback_state),
+                    event.payload.get("next_tool", event.payload.get("tool"))
+                    if event.type is AgentEventType.TOOL_STARTED
+                    else event.payload.get("next_tool"),
+                )
         status_event = event.type in {
             AgentEventType.STATE_CHANGED,
             AgentEventType.TOOL_STARTED,
@@ -135,6 +171,15 @@ class OfficeRuntime:
         }
         if status_event:
             evidence = self.status_evidence(event.agent_id)
+            if (
+                evidence.restored_fallback
+                and fallback_observed
+                and event.timestamp < evidence.observed_at
+            ):
+                # A scan may finish before a native release but arrive afterward. Reconcile the
+                # newer private tool snapshot at the handoff floor; never rewind status recency.
+                event = event.model_copy(update={"timestamp": evidence.observed_at})
+                reconciled_snapshot = True
             is_offline = (
                 event.type is AgentEventType.STATE_CHANGED
                 and event.payload["to"] == AgentState.OFFLINE
@@ -153,9 +198,20 @@ class OfficeRuntime:
 
         if event.type is AgentEventType.STATE_CHANGED:
             changes["status"] = AgentState(event.payload["to"])
+            if event.source is EventSource.NATIVE:
+                for field in ("current_tool", "waiting_reason", "waiting_on_agent_id"):
+                    if field in event.payload:
+                        changes[field] = event.payload[field]
+                if type(event.payload.get("native_exit_code")) is int:
+                    changes["metadata"] = {
+                        **current.metadata,
+                        "native_exit_code": event.payload["native_exit_code"],
+                    }
         elif event.type is AgentEventType.FILE_CHANGED:
             path = str(event.payload["file"])
             changes["changed_files"] = list(dict.fromkeys([*current.changed_files, path]))
+            if event.source is EventSource.NATIVE:
+                changes["changed_files"] = changes["changed_files"][-100:]
         elif event.type is AgentEventType.TASK_UPDATED:
             changes["task"] = event.payload.get("task")
         elif event.type is AgentEventType.TOOL_STARTED:
@@ -175,6 +231,20 @@ class OfficeRuntime:
             changes["metadata"] = {**current.metadata, "last_error": event.payload.get("message")}
 
         if "status" in changes:
+            release = (
+                event.source is EventSource.NATIVE
+                and event.type is AgentEventType.STATE_CHANGED
+                and event.payload.get("release_evidence") is True
+                and changes["status"] in BASELINE_STATES
+            )
+            fallback = self._fallback_tools.get(event.agent_id) if release else None
+            if fallback and fallback[1] in {
+                AgentState.TESTING,
+                AgentState.SEARCHING,
+                AgentState.TOOL_RUNNING,
+            }:
+                changes["status"] = fallback[1]
+                changes["current_tool"] = fallback[2]
             expected = (
                 event.payload.get("from") if event.type is AgentEventType.STATE_CHANGED else None
             )
@@ -183,9 +253,31 @@ class OfficeRuntime:
             )
             if changes["status"] in {AgentState.DONE, AgentState.ERROR, AgentState.OFFLINE}:
                 changes["current_tool"] = None
+                self._fallback_tools.pop(event.agent_id, None)
+            if changes["status"] is not AgentState.WAITING:
+                for field in ("waiting_reason", "waiting_on_agent_id"):
+                    if getattr(current, field) is not None or field in changes:
+                        changes[field] = None
         updated = self.registry.update(event.agent_id, **changes)
         if status_event:
-            self._status_evidence[event.agent_id] = StatusEvidence(event.source, event.timestamp)
+            fallback = self._fallback_tools.get(event.agent_id)
+            restored = (
+                event.source is EventSource.NATIVE
+                and event.type is AgentEventType.STATE_CHANGED
+                and event.payload.get("release_evidence") is True
+                and AgentState(event.payload["to"]) in BASELINE_STATES
+                and fallback is not None
+                and fallback[1] is updated.status
+                and updated.status not in BASELINE_STATES
+            )
+            self._status_evidence[event.agent_id] = StatusEvidence(
+                fallback[0].source if restored and fallback else event.source,
+                event.timestamp,
+                released=event.source is EventSource.NATIVE
+                and event.payload.get("release_evidence") is True
+                and updated.status in BASELINE_STATES,
+                restored_fallback=restored or reconciled_snapshot,
+            )
         serialized = {}
         for key, value in changes.items():
             if isinstance(value, AgentState):
@@ -195,7 +287,9 @@ class OfficeRuntime:
             else:
                 serialized[key] = value
         if event.type is AgentEventType.STATE_CHANGED:
-            serialized = {"status": updated.status.value}
+            serialized = {
+                key: value for key, value in serialized.items() if key != "last_active_at"
+            }
             if "current_tool" in changes and current.current_tool is not None:
                 serialized["current_tool"] = updated.current_tool
         return {"type": "agent.updated", "agent_id": event.agent_id, "changes": serialized}

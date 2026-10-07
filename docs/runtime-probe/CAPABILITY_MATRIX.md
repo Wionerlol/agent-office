@@ -1,6 +1,6 @@
 # Phase 3A capability matrix
 
-Phase 1 State Fidelity: **COMPLETE**. Phase 2 Semantic Agent Model: **COMPLETE**. Phase 3A Native Runtime Capability Probe: **COMPLETE**. Phase 3B Native Adapter: **NOT YET IMPLEMENTED**.
+Phase 1 State Fidelity: **COMPLETE**. Phase 2 Semantic Agent Model: **COMPLETE**. Phase 3A Native Runtime Capability Probe: **COMPLETE**. At the end of Phase 3A, Phase 3B Native Adapter was **NOT YET IMPLEMENTED**. Current Phase 3B v1 is complete; see [the production contract](../NATIVE_RUNTIME.md).
 
 Evidence collected on 2026-10-02: installed Codex CLI **0.159.3**, shared daemon **0.160.0**, current configured model **gpt-6.1-sol** with medium reasoning. The daemon version was read with `codex app-server daemon version`; both binaries generated their own experimental protocol schemas. No runtime upgrade/restart was performed.
 
@@ -46,3 +46,10 @@ Start with a thin, opt-in Codex app-server consumer, using version-specific prot
 - Add reconnect, replay/deduplication, unsupported-version behavior and an explicit office/thread binding contract before production delivery. The Unix WebSocket/experimental protocol and nullable role fields remain material uncertainties.
 
 No CodexNativeAdapter prototype or production normalization was needed for these conclusions.
+
+
+## Phase 3B interpretation (historical evidence unchanged)
+
+Native command existence/lifecycle becomes source=native with existing test/search classification; fileChange becomes scoped CODING evidence during an operation. Explicit Plan input waiting becomes WAITING/user_input rather than generic idle. Child identity/parentage/lifecycle enrich the existing semantic resolver, with generated nickname below a definition and null role absent. Reasoning remains diagnostic-only, child waiting remains conditional, and results/task text are not inferred.
+
+Production smoke additionally exercises daemon 0.160.1 / CLI 0.160.0. Exact reviewed profiles are centralized; unknown versions fail closed. This does not retroactively change the 2026-10-02 matrix/source observations or claim universal waiting, roles, reasoning, or remote MCP support. See ../ACCEPTANCE.md and ../NATIVE_RUNTIME.md.

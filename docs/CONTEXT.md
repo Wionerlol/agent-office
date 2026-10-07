@@ -83,10 +83,21 @@ Future work may include provider-specific native subagent normalization, explici
 
 ## Phase 3A completed: evidence before native integration
 
-State Fidelity and Semantic Agent Model are complete. Phase 3A adds only an opt-in diagnostic probe and sanitized runtime evidence; Phase 3B Native Adapter is not yet implemented. See `docs/runtime-probe/` before designing it.
+State Fidelity and Semantic Agent Model are complete. Phase 3A adds only an opt-in diagnostic probe and sanitized runtime evidence; At Phase 3A completion the native adapter was still unimplemented. See `docs/runtime-probe/` before designing it.
 
 The inspected CLI is 0.159.3; the running shared daemon is 0.160.0. Standalone stdio/exec JSONL and the real DevRouter daemon Unix WebSocket were exercised. Native waitingOnUserInput/request/resolve, fileChange, commandExecution, subAgentActivity and parent metadata are real facts. Ordinary active turns do not establish continuous thinking/coding, and native roles were null. Generated nicknames do not supply responsibility semantics.
 
 In the current shared-daemon path, tool execution can occur outside office-run's foreground TUI PID subtree. Its controlled 45-second ToolObserver scan produced no tool observations despite native history confirming successful rg/shell/pytest. This is new runtime capability evidence, not a change to the existing observer/arbitration code. A future adapter must bind office runtime identity to native thread identity explicitly and handle version differences, reconnect replay and missing metadata without inventing facts.
 
 Native IDs are pseudonymized in probe output. Free text/diffs/arguments/account/environment content are denied before persistence. Full captures and disposable manifests stay under ignored runtime/probe; only minimal reviewed extracts are checked in. There is no raw-event frontend protocol or schema change.
+
+
+## Phase 3B Native Runtime v1
+
+The native consumer now has explicit Office-ID/native-UUID handshake, exact version profiles, bounded reconnect reconstruction, structural-fact parsing and idempotent normalization. It is opt-in; the wrapper, process observers, project definitions, provenance system and frontend architecture remain. See NATIVE_RUNTIME.md for configuration, binding API, limits and operating procedures.
+
+Installed CLI is now 0.160.0 and shared daemon 0.160.1. Controlled real smoke uses a known native thread, actual office-run/TUI resume, and a separately owned driver for fixture turns and fixture answers. The production socket never answers requests or starts turns. Test definitions provide Tester responsibilities while generated nicknames remain diagnostic. Real editing/testing/input/subagent/reconnect flows exercise the same production API and consumer.
+
+A freshly created native thread without a first persisted turn can lack a resumable rollout despite metadata reporting idle. The controlled fixture first runs a read-only turn before TUI attach. This is not a reason to guess another native thread. Ordinary DevRouter still does not supply a native UUID; explicit handshake remains necessary. Source unavailability releases activity evidence, and the private ToolObserver snapshot prevents native completion from dropping a still-running fallback test.
+
+Next work should improve explicit launcher/DevRouter binding ergonomics, validate upgrades before widening compatibility, isolate per-thread failures, and harden long-running reconnect/reuse. No claim of universal thinking, approval waiting, remote MCP, task inference or child-result transfer is introduced.

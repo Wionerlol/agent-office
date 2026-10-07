@@ -51,7 +51,7 @@ That phase added lightweight project definitions and parent references, with sem
 
 Phase 3A Native Runtime Capability Probe is complete. Its evidence report distinguishes native facts from structured observations and process/heuristic fallbacks. The real Codex/DevRouter path exposes explicit user-input waiting, file-change/command lifecycles and subagent parentage; it does not establish continuous THINKING/CODING coverage or stable native roles. See [the capability matrix](runtime-probe/CAPABILITY_MATRIX.md).
 
-Phase 3B Native Adapter is not yet implemented. Its design must start from these runtime facts, preserving the two completed foundations and the principle explicit native fact > structured runtime observation > process/tool observation > filesystem fallback > heuristic inference. No prompt/task NLP is introduced.
+Phase 3B Native Adapter v1 is complete. It adds explicit native thread binding, user-input waiting, organizational child relationships and native command/file activity through the two completed foundations. Explicit native fact > structured runtime observation > process/tool observation > filesystem fallback > heuristic inference remains the principle. Reasoning coverage remains partial; no prompt/task NLP is introduced. See [the native runtime contract](NATIVE_RUNTIME.md).
 
 ## Long-term product language
 

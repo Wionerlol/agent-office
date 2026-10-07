@@ -1,0 +1,19 @@
+# Use AGENT_OFFICE_CONFIG to select this example; keep the API on loopback.
+project:
+  name: agent-office
+  path: .
+native:
+  codex:
+    enabled: true
+    codex_binary: codex
+    reconnect_seconds: 2
+    terminal_seconds: 3
+# Bind a registered Office Agent explicitly; enabling does not discover threads.
+# Optional child_definition_id on the bind request selects this definition for children.
+agents:
+  - id: tester
+    name: Tester
+    role: tester
+    responsibilities:
+      - Run tests
+      - Investigate failures

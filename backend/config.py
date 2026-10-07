@@ -43,6 +43,18 @@ class FrontendSettings(BaseModel):
     port: int = 5173
 
 
+class CodexNativeSettings(BaseModel):
+    enabled: bool = False
+    codex_binary: str = "codex"
+    socket_path: Path | None = None
+    reconnect_seconds: float = Field(default=2.0, ge=0.1, le=60)
+    terminal_seconds: float = Field(default=3.0, ge=0.1, le=30)
+
+
+class NativeSettings(BaseModel):
+    codex: CodexNativeSettings = Field(default_factory=CodexNativeSettings)
+
+
 class Settings(AgentDefinitionsSettings):
     project: ProjectSettings = Field(default_factory=ProjectSettings)
     projects: list[ProjectSettings] = Field(default_factory=list)
@@ -50,6 +62,7 @@ class Settings(AgentDefinitionsSettings):
     server: ServerSettings = Field(default_factory=ServerSettings)
     office: OfficeSettings = Field(default_factory=OfficeSettings)
     frontend: FrontendSettings = Field(default_factory=FrontendSettings)
+    native: NativeSettings = Field(default_factory=NativeSettings)
 
     @classmethod
     def load_default(cls) -> "Settings":

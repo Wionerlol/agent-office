@@ -27,6 +27,11 @@ export function AgentPanel({ agent, events, onClose }: AgentPanelProps) {
         {agent.definition_id && <><dt>Definition</dt><dd>{agent.definition_id}</dd></>}
         <dt>Current Task</dt><dd>{agent.task ?? "—"}</dd>
         <dt>Current State</dt><dd>{agent.status}</dd>
+        {agent.waiting_reason && <><dt>Waiting reason</dt><dd>{
+          agent.waiting_reason === "user_input" ? "Waiting for user input" :
+          agent.waiting_reason === "child_agent" ? "Waiting for child agent" : agent.waiting_reason
+        }</dd></>}
+        {agent.waiting_on_agent_id && <><dt>Waiting on Agent</dt><dd>{agent.waiting_on_agent_id}</dd></>}
         <dt>PID</dt><dd>{agent.pid ?? "—"}</dd>
         <dt>Branch</dt><dd>{agent.branch ?? "—"}</dd>
         <dt>Worktree</dt><dd>{agent.worktree ?? "—"}</dd>

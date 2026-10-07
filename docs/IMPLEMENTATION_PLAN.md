@@ -5,7 +5,8 @@
 1. State Fidelity — COMPLETE.
 2. Semantic Agent Model — COMPLETE.
 3. Phase 3A Native Runtime Capability Probe — COMPLETE: inspect installed CLI/daemon/DevRouter, isolate content-denying capture and selected-thread observation, exercise real A–F scenarios, publish reviewed matrix/samples, run regressions and prepare a PR.
-4. Phase 3B Native Adapter — NOT YET IMPLEMENTED. Use the evidence report to decide explicit runtime binding, waiting semantics, replay handling, nullable identity metadata and normalization boundaries before coding.
+4. Phase 3B Native Runtime Adapter v1 — COMPLETE. Explicit bindings, read-only versioned consumer, waiting context, semantic child normalization, bounded replay/reconciliation and concurrent activity aggregation are implemented. Full regression and real daemon/TUI smoke passed; preserve these gates for revisions.
+5. Phase 3B v2 / Phase 4 — NOT YET IMPLEMENTED. Prioritize explicit launcher binding ergonomics, version validation, per-thread failure isolation and long-running replay/reuse before new spatial features.
 
 ## Completed Phase 2: Semantic Agent Model
 

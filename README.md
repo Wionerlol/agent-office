@@ -29,9 +29,15 @@ uv run office-run codex --definition tester --parent lead --task "Verify authent
 
 The registered instance appears as Tester, with its definition responsibilities and parent ID in details. Role remains stable while task, state and executable change. Native/orchestrator events can provide authoritative overrides with `source=native`; project defaults outrank wrapper/API metadata. Existing unregistered agents retain fallback identity. Use `--id` when a caller owns instance identity; otherwise definition-based launches get distinct IDs.
 
+## Native Codex runtime (Phase 3B v1)
+
+Opt-in native integration adds explicit thread binding, user-input waiting, native child relationships and concurrent command/file activity through the existing runtime. Enable `native.codex.enabled` in local YAML; use [the example configuration](config/native-codex.example.yaml) and [the binding/compatibility guide](docs/NATIVE_RUNTIME.md). Known native UUIDs must be explicitly bound to registered Office IDs; same-repository processes are never guessed. Ordinary DevRouter currently requires that handshake.
+
+Production observes the existing daemon without answering requests, controlling the TUI, writing raw logs, or replacing wrapper/process fallbacks. Unknown versions and disconnects safely degrade. The diagnostic probe below remains separate.
+
 ## Native runtime capability probe (Phase 3A)
 
-State Fidelity and Semantic Agent Model are complete. Phase 3A provides an opt-in diagnostic probe; the Phase 3B native adapter is not yet implemented. See the [capability matrix](docs/runtime-probe/CAPABILITY_MATRIX.md), [repeatable commands](docs/runtime-probe/CODEX.md) and [observed samples](docs/runtime-probe/SAMPLES.md).
+State Fidelity and Semantic Agent Model are complete. Phase 3A provides an opt-in diagnostic probe; the Phase 3B native adapter is described above. See the [capability matrix](docs/runtime-probe/CAPABILITY_MATRIX.md), [repeatable commands](docs/runtime-probe/CODEX.md) and [observed samples](docs/runtime-probe/SAMPLES.md).
 
 ```bash
 uv run python -m backend.probe experiment --output-dir runtime/probe/run-01
