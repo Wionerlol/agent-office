@@ -28,6 +28,8 @@ export const OFFICE_HEIGHT = 680;
 
 export const ZONES: ZoneLayout[] = [
   { id: "entrance", label: "RECEPTION", x: 28, y: 280, width: 118, height: 110, color: 0xc5d5ca },
+  { id: "review_area", label: "REVIEW", x: 28, y: 42, width: 118, height: 206, color: 0xcbb8c3 },
+  { id: "user_attention", label: "NEEDS YOU", x: 28, y: 420, width: 118, height: 222, color: 0xe5c38a },
   { id: "desk_area", label: "OPEN OFFICE", x: 176, y: 42, width: 610, height: 388, color: 0xded4c1 },
   { id: "library", label: "RESEARCH LIBRARY", x: 816, y: 42, width: 254, height: 170, color: 0xd8c9a8 },
   { id: "coffee_area", label: "CAFÉ & KITCHEN", x: 176, y: 462, width: 182, height: 180, color: 0xc8ad8d },
@@ -39,6 +41,9 @@ export const ZONES: ZoneLayout[] = [
 
 export const POSITIONS: Record<string, Point> = {
   entrance: { x: 85, y: 370 },
+  review_area: { x: 87, y: 156 },
+  user_attention: { x: 87, y: 532 },
+  coordination: { x: 477, y: 558 },
   "desk-1": { x: 250, y: 230 },
   "desk-2": { x: 400, y: 230 },
   "desk-3": { x: 550, y: 230 },
@@ -83,6 +88,7 @@ const ZONE_PLACEMENT_AREAS: Record<string, PlacementArea> = {
 };
 
 function placementArea(zone: string, anchor: Point): PlacementArea {
+  if (zone.startsWith("desk-")) return { x: anchor.x - 56, y: anchor.y + 10, width: 112, height: 32 };
   const room = ZONES.find((candidate) => candidate.id === zone);
   if (!room) return { x: anchor.x - 62, y: anchor.y - 58, width: 124, height: 116 };
   if (ZONE_PLACEMENT_AREAS[zone]) return ZONE_PLACEMENT_AREAS[zone];
@@ -164,6 +170,66 @@ export function spreadAgentTargets(targets: readonly AgentTarget[]): Map<string,
     sortedIds.forEach((id, index) => positions.set(id, slots[index]));
   }
   return positions;
+}
+
+// Comfortable, walkable seats use the existing floor/furniture rather than another layout engine.
+const TEAM_SLOTS: Record<string, AgentPlacement[]> = {
+  library: [865, 943, 1021].map((x) => ({ x, y: 170, scale: 0.75, showLabel: true })),
+  test_lab: [371, 470].flatMap((y) => [891, 1007].map((x) => ({ x, y, scale: 0.8, showLabel: true }))),
+  review_area: [132, 224].map((y) => ({ x: 87, y, scale: 0.8, showLabel: true })),
+  user_attention: [462, 541, 620].map((y) => ({ x: 87, y, scale: 0.72, showLabel: true })),
+  lounge: [433, 521].map((x) => ({ x, y: 561, scale: 0.8, showLabel: true })),
+  tool_lab: [636, 705, 774].map((x) => ({ x, y: 575, scale: 0.7, showLabel: true })),
+};
+
+/** Reservations live only for visible agents. Removing/reordering peers never compacts seats. */
+export class StableZoneSlots {
+  private reservations = new Map<string, { zone: string; slot: number }>();
+  private capacities = new Map<string, number>();
+
+  clear(): void {
+    this.reservations.clear();
+    this.capacities.clear();
+  }
+
+  place(targets: readonly AgentTarget[]): Map<string, AgentPlacement> {
+    // Coordination shares the lounge floor, so generic waiting cannot claim the same seat.
+    const canonical = targets.map(({ id, zone }) => ({ id, zone: zone === "coordination" ? "lounge" : zone }));
+    const current = new Map(canonical.map(({ id, zone }) => [id, zone]));
+    for (const [id, reserved] of this.reservations) {
+      if (current.get(id) !== reserved.zone) this.reservations.delete(id);
+    }
+    for (const zone of this.capacities.keys()) {
+      if (!canonical.some((target) => target.zone === zone)) this.capacities.delete(zone);
+    }
+    const result = new Map<string, AgentPlacement>();
+    const byZone = new Map<string, string[]>();
+    for (const { id, zone } of canonical) byZone.set(zone, [...(byZone.get(zone) ?? []), id]);
+    for (const [zone, ids] of byZone) {
+      const anchor = POSITIONS[zone] ?? POSITIONS.entrance;
+      const comfortable = TEAM_SLOTS[zone] ?? (zone.startsWith("desk-")
+        ? [{ x: anchor.x, y: anchor.y + 14, scale: 1, showLabel: true }] : undefined);
+      let capacity = this.capacities.get(zone) ?? comfortable?.length ?? 1;
+      // Only a meaningful crowding increase repacks a zone; it never shrinks on rerenders/exits.
+      while (capacity < ids.length) capacity *= 2;
+      this.capacities.set(zone, capacity);
+      const seats = comfortable && capacity === comfortable.length
+        ? comfortable : spreadAround(POSITIONS[zone] ?? POSITIONS.entrance, capacity, zone);
+      const taken = new Set([...this.reservations.values()].filter((r) => r.zone === zone).map((r) => r.slot));
+      for (const id of [...ids].sort()) {
+        let reservation = this.reservations.get(id);
+        if (!reservation) {
+          let slot = 0;
+          while (taken.has(slot)) slot += 1;
+          reservation = { zone, slot };
+          this.reservations.set(id, reservation);
+          taken.add(slot);
+        }
+        result.set(id, seats[reservation.slot]);
+      }
+    }
+    return result;
+  }
 }
 
 export function separateAgentPositions(

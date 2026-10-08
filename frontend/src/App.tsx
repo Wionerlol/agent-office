@@ -48,6 +48,9 @@ function App() {
           <CodexUsageIndicator usage={store.codexUsage} />
           <span className={`connection connection-${store.connection}`}><i />{store.connection}</span>
           <span className="agent-count">{agents.length} agents</span>
+          {demoMode && <button onClick={() => store.setSimulationPaused(!store.simulationPaused)}>
+            {store.simulationPaused ? "Resume" : "Pause"} simulation
+          </button>}
         </div>
       </header>
       <Achievements agents={agents} />

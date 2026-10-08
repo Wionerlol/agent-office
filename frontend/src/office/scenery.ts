@@ -94,7 +94,9 @@ function drawRooms(scene: Container): void {
         .rect(zone.x, zone.y, zone.width, zone.height)
         .fill({ color: zone.color, alpha: zone.id === "desk_area" ? 0.26 : 0.48 }),
     );
-    scene.addChild(label(zone.label, zone.x + 12, zone.y + 10, { size: 10, color: 0x4a5756, weight: "700" }));
+    // Keep the attention title above the first occupied seat, readable even at full capacity.
+    const labelY = zone.id === "user_attention" ? zone.y - 12 : zone.y + 10;
+    scene.addChild(label(zone.label, zone.x + 12, labelY, { size: 10, color: 0x4a5756, weight: "700" }));
   }
 
   const walls = new Graphics();
@@ -204,6 +206,15 @@ function drawReception(scene: Container): void {
   reception.rect(80, 283, 30, 20).fill(COLORS.screen).rect(92, 303, 5, 9).fill(COLORS.metal);
   reception.roundRect(48, 362, 76, 16, 8).fill(0x6d837d);
   scene.addChild(reception, label("WELCOME", 84, 384, { size: 8, color: 0x52615e, anchor: 0.5 }));
+}
+
+function drawTeamAnchors(scene: Container): void {
+  // Small wall board and attention marker in previously unused left-hand floor space.
+  const board = new Graphics().roundRect(48, 72, 78, 32, 4).fill(0xf2ead9).stroke({ width: 2, color: 0x76563e });
+  for (const y of [80, 88, 96]) board.moveTo(59, y).lineTo(115, y).stroke({ width: 1, color: 0x78908b });
+  const marker = new Graphics().circle(87, 441, 11).fill(0xffe6ae).stroke({ width: 1, color: 0x826539 });
+  scene.addChild(board, marker, label("?", 87, 433, { size: 13, anchor: 0.5 }),
+    label("COORDINATION", 478, 632, { size: 8, anchor: 0.5 }));
 }
 
 function drawPlant(scene: Container, x: number, y: number, scale = 1): void {
@@ -348,6 +359,7 @@ export function drawOfficeScenery(app: Application, initialAtmosphere: OfficeAtm
   drawToolLab(background);
   drawTestLab(background);
   drawReception(background);
+  drawTeamAnchors(background);
   drawDetails(background);
 
   const cityLayer = new Container();
