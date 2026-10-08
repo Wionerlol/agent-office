@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { focusFor } from "./focus";
 import { Container } from "pixi.js";
 import { demoAgents } from "../data/demo";
 import type { InteractionCue } from "../models/interaction";
@@ -56,4 +57,23 @@ describe("interaction projection/rendering", () => {
     expect(layer.connectors.children).toHaveLength(1); expect(badge.destroyed).toBe(true);
     layer.destroy(); expect(stage.children).toHaveLength(0);
   });
+});
+
+it("focus reuses badges, reduced motion keeps static symbols and respects original expiry", () => {
+  const stage = new Container(), layer = new InteractionLayer(stage);
+  const agents = [{ ...parent, status: "thinking" as const }, child];
+  layer.setState(agents, [cue]);
+  layer.setPresentation(child.id, focusFor(agents, child.id, null, [cue], 1000), true);
+  layer.draw(positions, 1000);
+  const badge = layer.markers.children[0];
+  const before = { x: badge.x, y: badge.y };
+  layer.draw(positions, 2000);
+  expect(layer.markers.children[0]).toBe(badge);
+  expect({ x: badge.x, y: badge.y }).toEqual(before);
+  expect((badge as Container).children).toHaveLength(2);
+  layer.setPresentation(null, new Map(), false); layer.draw(positions, 2500);
+  expect(layer.markers.children[0]).toBe(badge);
+  expect({ x: badge.x, y: badge.y }).not.toEqual(before);
+  layer.draw(positions, 3000); expect(badge.destroyed).toBe(true);
+  expect(cue.expiresAt).toBe(3000); layer.destroy();
 });

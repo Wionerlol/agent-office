@@ -1,6 +1,6 @@
 # Agent Office Acceptance Criteria
 
-Current state: Phases 1–3B v1.1 and fresh-session investigation COMPLETE; Phase 4A COMPLETE; Phase 4B COMPLETE; Phase 4C NOT YET IMPLEMENTED. Earlier phase sections below retain their historical evidence.
+Current state: Phases 1–3B v1.1 and fresh-session investigation COMPLETE; Phase 4A COMPLETE; Phase 4B COMPLETE; Phase 4C COMPLETE. Earlier phase sections below retain their historical evidence.
 
 ## Fresh-session deterministic correlation investigation — COMPLETE
 
@@ -279,3 +279,24 @@ Phase 4A local verification (2026-10-08): `uv run pytest -q` 210 passed, two exi
 Visual evidence under docs/images/interaction-*.png uses only normalized disposable fixture Agents, not private runtime content. Required local suites and hosted Backend/Frontend remain mandatory; exact hosted results belong to the final PR commit. Phase 4C is not implemented.
 
 Phase 4B local verification (2026-10-08): `uv run pytest -q` 210 passed / two existing deprecation warnings; `uv run ruff check backend main.py` passed; frontend `npm test -- --reporter=dot` 90 passed / 16 files; `npm run lint`, `npm run build` and `git diff --check` passed. Final Chromium fixture smoke reports zero page errors and all eight timed screenshots were inspected. An early fixed 5.1s browser cleanup wait was too tight for message receipt plus the 250ms sweep; observing receipt and polling expiry corrected the fixture. No product assertions or grace duration were weakened. Hosted results are attached to the final PR commit.
+
+
+## Phase 4C — Daily-Use Readability & Interaction
+
+- [x] Selected Agent has floor/name emphasis; direct explicit parent/child/wait/cue context remains clear. Repository/task/role peers are not inferred teammates.
+- [x] Unrelated Agents stay visible; user attention and ERROR retain priority globally.
+- [x] Dense selected/attention/ERROR labels remain eligible at readable map-space size, independently of physical slots. Ordinary labels may yield.
+- [x] Selection/hover changes presentation only: existing Pixi/scenery, routes and stable seats remain; cues/TTL and backend truth are unchanged.
+- [x] Direct visible parent/child/wait-target panel navigation shares selection; missing/filtered targets degrade safely without fake names/graphs.
+- [x] DOM Team buttons provide Tab/Enter/Space, pressed/selected announcements and focus outlines. Escape, panel close and empty map taps clear selection; close/Escape restore navigator focus when available.
+- [x] A bounded content-free map description supports the navigator rather than concatenating a whole team history.
+- [x] Live prefers-reduced-motion disables decoration/packets while preserving static ?, !, →, ✓ and shorter routed location changes.
+- [x] Desktop viewports 1440×900, 1280×800, 1024×768 and 800×768 retain map aspect and reachable details, with no horizontal overflow.
+- [x] Presentation objects/listeners are retained and removed correctly; existing Phase 4A/4B behavior remains covered.
+- [x] Chromium controlled normalized WebSocket screenshots demonstrate whole office, selected Tester/Lead, hover, crowding, relation navigation, globally visible attention/ERROR, responsive widths and reduced motion, with real keyboard actions and no page errors.
+
+Required local verification: backend pytest/ruff, frontend tests/lint/build, and git diff check. Required hosted checks remain Backend and Frontend on the final PR commit, never bypassed. Browser evidence uses controlled normalized fixtures, not native-runtime capability claims. Decisions 1–38 and backend/native semantics remain unchanged. Phase 4D is not implemented.
+
+Phase 4C local verification (2026-10-08): `uv run pytest -q` **210 passed / two existing deprecation warnings**; `uv run ruff check backend main.py` passed; frontend `npm test -- --reporter=dot` **102 passed / 19 files** (12 added cases plus all 90 prior cases); `npm run lint`, `npm run build` and `git diff --check` passed. Tests cover projection/non-inference, active-cue focus expiry, attention/ERROR priority, no seat/route/application recreation, detached-label removal/unmount, direct relation navigation/missing targets, Escape listener cleanup, live media preference cleanup and retained/static interaction primitives/original expiry.
+
+Final Chromium checks pass with zero page errors: actual actor hover/tap, Team Tab/Enter/Space, Escape/panel close with focus return, empty office clear, visible parent/child/wait-target navigation, four no-overflow aspect-preserving viewports, dense selected labels, live reduced motion and unchanged transient expiry. Twelve screenshots under `docs/images/readability-*.png` were captured and inspected. Visual review caught scenery intercepting hover after adding background taps; scenery now explicitly rejects pointer events, with a deterministic scene contract and successful real actor tap/hover. Early test Canvas-measurement and pointer-event typing fixture gaps were corrected; no assertions were removed/skipped. Hosted results must be successful on the final PR commit and are reported on that PR.

@@ -1,5 +1,5 @@
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Agent } from "../models/agent";
 import { AgentPanel } from "./AgentPanel";
@@ -23,7 +23,7 @@ describe("AgentPanel semantic identity", () => {
     expect(screen.getByText("Role").nextElementSibling).toHaveTextContent("tester");
     expect(screen.getByText("Responsibilities").nextElementSibling).toHaveTextContent("Run unit tests");
     expect(screen.getByText("Investigate failures")).toBeInTheDocument();
-    expect(screen.getByText("Parent Agent").nextElementSibling).toHaveTextContent("lead");
+    expect(screen.getByText("Parent Agent").nextElementSibling).toHaveTextContent("Not in this view");
     expect(screen.getByText("Current Task").nextElementSibling).toHaveTextContent("Verify auth");
     expect(screen.getByText("Current State").nextElementSibling).toHaveTextContent("testing");
     expect(screen.getByText("Current Tool").nextElementSibling).toHaveTextContent("pytest");
@@ -63,6 +63,19 @@ describe("AgentPanel waiting context", () => {
     render(<AgentPanel agent={{ ...legacy, status: "waiting", waiting_reason: "child_agent",
       waiting_on_agent_id: "tester-child" }} events={[]} onClose={() => undefined} />);
     expect(screen.getByText("Waiting for child agent")).toBeInTheDocument();
-    expect(screen.getByText("Waiting on Agent").nextElementSibling).toHaveTextContent("tester-child");
+    expect(screen.getByText("Waiting on Agent").nextElementSibling).toHaveTextContent("Not in this view");
   });
+});
+
+ it("navigates only visible direct parent, children and waiting target", () => {
+  const lead = { ...legacy, id: "lead", name: "Lead", parent_agent_id: "grandparent", status: "waiting" as const, waiting_reason: "child_agent", waiting_on_agent_id: "tester" };
+  const tester = { ...legacy, id: "tester", name: "Tester", parent_agent_id: "lead" };
+  const grandparent = { ...legacy, id: "grandparent", name: "Owner" };
+  const grandchild = { ...legacy, id: "grandchild", name: "Not direct", parent_agent_id: "tester" };
+  const select = vi.fn();
+  render(<AgentPanel agent={lead} visibleAgents={[lead, tester, grandparent, grandchild]} events={[]} onClose={() => undefined} onSelect={select} />);
+  fireEvent.click(screen.getByRole("button", { name: "Owner" }));
+  for (const button of screen.getAllByRole("button", { name: "Tester" })) fireEvent.click(button);
+  expect(select.mock.calls).toEqual([["grandparent"], ["tester"], ["tester"]]);
+  expect(screen.queryByText("Not direct")).not.toBeInTheDocument();
 });

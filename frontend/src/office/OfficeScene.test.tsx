@@ -1,6 +1,9 @@
-import { cleanup, render, waitFor } from "@testing-library/react";
+import { act, cleanup, render, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { useAgentStore } from "../store/agents";
+import * as navigation from "./navigation";
+import { Container } from "pixi.js";
 import { OfficeScene } from "./OfficeScene";
 import { demoAgents } from "../data/demo";
 
@@ -14,6 +17,8 @@ vi.mock("pixi.js", async () => {
   const canvasContext = vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
   const actual = await vi.importActual<typeof import("pixi.js")>("pixi.js");
   canvasContext.mockRestore();
+  vi.spyOn(actual.Text.prototype, "width", "get").mockImplementation(function (this: import("pixi.js").Text) { return this.text.length * 6; });
+  vi.spyOn(actual.Text.prototype, "height", "get").mockReturnValue(12);
   return { ...actual,
   Application: class {
     canvas = document.createElement("canvas");
@@ -37,8 +42,10 @@ vi.mock("pixi.js", async () => {
 });
 
 vi.mock("./scenery", () => ({
-  drawOfficeScenery: sceneryMocks.drawOfficeScenery.mockReturnValue({
-    setAtmosphere: sceneryMocks.setAtmosphere,
+  drawOfficeScenery: sceneryMocks.drawOfficeScenery.mockImplementation((app: import("pixi.js").Application) => {
+    const furniture = new Container(); furniture.label = "scenery";
+    app.stage.addChild(furniture);
+    return { setAtmosphere: sceneryMocks.setAtmosphere };
   }),
 }));
 
@@ -48,7 +55,7 @@ afterEach(() => {
   sceneryMocks.scenes.length = 0;
 });
 
-const figures = (stage: import("pixi.js").Container) => stage.children.filter((child) => !child.label?.startsWith("interaction-"));
+const figures = (stage: import("pixi.js").Container) => stage.children.filter((child) => !child.label?.startsWith("interaction-") && !child.label?.startsWith("agent-labels:") && child.label !== "scenery");
 
 describe("OfficeScene", () => {
   it.each(["steady", "uneven"])("simultaneous arrivals reach their areas with %s frame timing", async (timing) => {
@@ -107,6 +114,8 @@ describe("OfficeScene", () => {
   it("exposes content-free user attention in the accessible scene description", async () => {
     const waiting = { ...demoAgents[1], status: "waiting" as const, waiting_reason: "user_input" };
     const view = render(<OfficeScene agents={[waiting]} deskCount={8} />);
+    expect(view.getByRole("img")).toHaveAccessibleName(/1 need you/);
+    view.rerender(<OfficeScene agents={[waiting]} deskCount={8} selectedId="tester" />);
     expect(view.getByRole("img")).toHaveAccessibleName(/Tester: waiting, \? Needs you/);
     await waitFor(() => expect(figures(sceneryMocks.scenes[0].stage)).toHaveLength(1));
   });
@@ -121,6 +130,35 @@ describe("OfficeScene", () => {
     expect(canvas).toHaveStyle({ width: "100%", height: "100%" });
     expect(canvas).toHaveAttribute("width", "1100");
     expect(canvas).toHaveAttribute("height", "680");
+  });
+
+  it("selection and hover update presentation without reseating, routing or rebuilding", async () => {
+    const team = Array.from({ length: 8 }, (_, i) => ({ ...demoAgents[1], id: `tester${i}`, name: `Semantic Tester ${i}`, parent_agent_id: null }));
+    const route = vi.spyOn(navigation, "routeBetween");
+    const view = render(<OfficeScene agents={team} deskCount={8} />);
+    await waitFor(() => expect(figures(sceneryMocks.scenes[0].stage)).toHaveLength(8));
+    const scene = sceneryMocks.scenes[0];
+    for (let i = 0; i < 1200; i++) scene.tick?.({ deltaTime: 1 });
+    expect(scene.stage.children.find((a) => a.label === "scenery")?.eventMode).toBe("none");
+    const before = figures(scene.stage).map((a) => [a.x, a.y]);
+    route.mockClear();
+    view.rerender(<OfficeScene agents={team} deskCount={8} selectedId="tester7" reducedMotion />);
+    const actor = figures(scene.stage)[7] as import("pixi.js").Container;
+    const { EventBoundary, FederatedPointerEvent } = await import("pixi.js");
+    act(() => { actor.emit("pointerover", new FederatedPointerEvent(new EventBoundary(scene.stage))); });
+    scene.tick?.({ deltaTime: 1 });
+    const label = scene.stage.children.find((a) => a.label === "agent-labels:tester7") as import("pixi.js").Container;
+    expect(label.visible).toBe(true);
+    expect((label.children[1] as import("pixi.js").Text).text).toBe("Semantic Tester 7");
+    expect(label.scale.x).toBe(1); expect(actor.alpha).toBe(1);
+    expect(figures(scene.stage)[0].alpha).toBe(0.62);
+    expect(figures(scene.stage).map((a) => [a.x, a.y])).toEqual(before);
+    expect(route).not.toHaveBeenCalled(); expect(sceneryMocks.scenes).toHaveLength(1);
+    scene.stage.emit("pointertap", new FederatedPointerEvent(new EventBoundary(scene.stage))); expect(useAgentStore.getState().selectedAgentId).toBeNull();
+    view.rerender(<OfficeScene agents={team.slice(0, 7)} deskCount={8} reducedMotion />);
+    expect(label.destroyed).toBe(true); expect(actor.destroyed).toBe(true);
+    view.unmount(); expect(label.destroyed).toBe(true); expect(actor.destroyed).toBe(true);
+    route.mockRestore();
   });
 
   it("updates the city and indoor lighting when remaining usage changes", async () => {

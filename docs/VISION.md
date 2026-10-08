@@ -67,14 +67,19 @@ Examples:
 
 Test Lab activity, user attention and usage atmosphere are implemented. Failure-specific room signals, busier ambience and PR-ready behavior remain future extensions. Phase 4A adds role homes and attention/coordination interpretation on top of the runtime-state foundation.
 
-Phase 3B v1.1 hardens daily operation: explicit launch identity enables a low-friction binding handshake, per-thread degradation preserves unrelated work, and local diagnostics distinguish integration health from agent activity. Fresh-session correlation remains unsupported without an explicit native identity; Phase 4A is implemented; Phase 4B interaction cues are implemented; Phase 4C has not begun.
+Phase 3B v1.1 hardens daily operation: explicit launch identity enables a low-friction binding handshake, per-thread degradation preserves unrelated work, and local diagnostics distinguish integration health from agent activity. Fresh-session correlation remains unsupported without an explicit native identity; Phase 4A is implemented; Phase 4B interaction cues are implemented; Phase 4C daily-use readability is implemented.
 
 
 ## Phase 4A: spatial team behavior
 
-Stable roles now give agents a recognizable home: Test Lab for Testers, Library for Researchers, Review Area for Reviewers, and desks for engineers/leads. Current work temporarily overrides home. Explicit user-input waiting brings agents to NEEDS YOU; deterministic child waiting uses coordination. Completion celebrates in place during existing grace. These are interpretations of normalized truth, without provider content or runtime inference. Phase 4B interaction cues are implemented; Phase 4C has not begun.
+Stable roles now give agents a recognizable home: Test Lab for Testers, Library for Researchers, Review Area for Reviewers, and desks for engineers/leads. Current work temporarily overrides home. Explicit user-input waiting brings agents to NEEDS YOU; deterministic child waiting uses coordination. Completion celebrates in place during existing grace. These are interpretations of normalized truth, without provider content or runtime inference. Phase 4B interaction cues are implemented; Phase 4C daily-use readability is implemented.
 
 
 ## Phase 4B: confirmed team interaction
 
-Space now communicates collaboration as well as activity: a newly started child can receive a brief directional delegation pulse; an incremental DONE child returns a completion pulse; explicit child waiting retains a quiet coordination link. ERROR has a persistent exclamation marker and short failure emphasis. User attention remains strongest. These are content-free interpretations of normalized relationships/transitions, never a permanent org graph or a new backend fact. Phase 4C is not implemented.
+Space now communicates collaboration as well as activity: a newly started child can receive a brief directional delegation pulse; an incremental DONE child returns a completion pulse; explicit child waiting retains a quiet coordination link. ERROR has a persistent exclamation marker and short failure emphasis. User attention remains strongest. These are content-free interpretations of normalized relationships/transitions, never a permanent org graph or a new backend fact. Phase 4C daily-use readability is implemented.
+
+
+## Phase 4C: glance, focus and return
+
+The office now supports daily inspection: select a semantic Agent, read its direct explicit context, navigate related Agents in details, and return to the whole office with Escape or an empty-area click. Priority labels preserve attention/ERROR/selection in crowded zones while unrelated characters stay visible. Keyboard Team controls and system reduced motion express the same facts. Laptop-width details stack beneath the complete scalable office. Runtime truth, spatial destinations and transient interaction meaning remain separate and unchanged.

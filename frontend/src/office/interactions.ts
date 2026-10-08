@@ -1,12 +1,15 @@
 import { Container, Graphics, Text } from "pixi.js";
 import type { Agent } from "../models/agent";
 import { coordinationLinks, type InteractionCue } from "../models/interaction";
+import { connectorEmphasis, type AgentFocus } from "./focus";
 import type { Point } from "./layout";
 
 export interface AgentPosition extends Point { scale: number }
 export interface InteractionStroke {
   id: string;
   kind: "coordination" | "delegation" | "handoff";
+  sourceAgentId: string;
+  targetAgentId: string;
   from: Point;
   to: Point;
   progress: number;
@@ -28,7 +31,7 @@ export function interactionFrame(agents: readonly Agent[], cues: readonly Intera
   const strokes: InteractionStroke[] = [];
   for (const link of coordinationLinks([...visible.values()])) {
     const points = pair(link.sourceAgentId, link.targetAgentId);
-    if (points) strokes.push({ id: `wait:${link.sourceAgentId}`, kind: "coordination", ...points, progress: 0.5,
+    if (points) strokes.push({ id: `wait:${link.sourceAgentId}`, kind: "coordination", sourceAgentId: link.sourceAgentId, targetAgentId: link.targetAgentId, ...points, progress: 0.5,
       quiet: needsUser(visible.get(link.targetAgentId)!) });
   }
   const active = cues.filter((c) => c.createdAt <= now && c.expiresAt > now);
@@ -37,7 +40,7 @@ export function interactionFrame(agents: readonly Agent[], cues: readonly Intera
     const points = pair(cue.sourceAgentId, cue.targetAgentId);
     // Explicit user attention stays strongest; do not fly another badge across its marker.
     if (points && !needsUser(visible.get(cue.sourceAgentId)!) && !needsUser(visible.get(cue.targetAgentId)!)) {
-      strokes.push({ id: cue.id, kind: cue.kind, ...points,
+      strokes.push({ id: cue.id, kind: cue.kind, sourceAgentId: cue.sourceAgentId, targetAgentId: cue.targetAgentId, ...points,
         progress: (now - cue.createdAt) / (cue.expiresAt - cue.createdAt), quiet: false });
     }
   }
@@ -69,6 +72,9 @@ export class InteractionLayer {
   private badges = new Map<string, Container>();
   private agents: readonly Agent[] = [];
   private cues: readonly InteractionCue[] = [];
+  private selectedId: string | null = null;
+  private focus: ReadonlyMap<string, AgentFocus> = new Map();
+  private reducedMotion = false;
 
   constructor(stage: Container) {
     this.connectors.label = "interaction-connectors";
@@ -82,21 +88,27 @@ export class InteractionLayer {
 
   setState(agents: readonly Agent[], cues: readonly InteractionCue[]): void { this.agents = agents; this.cues = cues; }
 
+  setPresentation(selectedId: string | null, focus: ReadonlyMap<string, AgentFocus>, reducedMotion: boolean): void {
+    this.selectedId = selectedId; this.focus = focus; this.reducedMotion = reducedMotion;
+  }
+
   draw(positions: ReadonlyMap<string, AgentPosition>, now: number): void {
     const frame = interactionFrame(this.agents, this.cues, positions, now), used = new Set<string>();
     this.lines.clear();
     for (const stroke of frame.strokes) {
       const color = stroke.kind === "handoff" ? 0x46745b : stroke.kind === "delegation" ? 0x4c6585 : 0x607d78;
-      const alpha = stroke.quiet ? 0.2 : stroke.kind === "coordination" ? 0.5 : 0.65;
+      const emphasis = connectorEmphasis(stroke.sourceAgentId, stroke.targetAgentId, this.selectedId, this.focus);
+      const alpha = stroke.quiet ? 0.2 : emphasis === "quiet" ? 0.18 : emphasis === "focused" ? 0.9 : stroke.kind === "coordination" ? 0.5 : 0.65;
       for (let i = 0; i < 24; i += 2) {
         const a = arcPoint(stroke.from, stroke.to, i / 24), b = arcPoint(stroke.from, stroke.to, (i + 1) / 24);
-        this.lines.moveTo(a.x, a.y).lineTo(b.x, b.y).stroke({ width: 1.5, color, alpha });
+        this.lines.moveTo(a.x, a.y).lineTo(b.x, b.y).stroke({ width: emphasis === "focused" ? 2.5 : 1.5, color, alpha });
       }
-      const point = arcPoint(stroke.from, stroke.to, stroke.progress);
+      const progress = this.reducedMotion ? 0.5 : stroke.progress;
+      const point = arcPoint(stroke.from, stroke.to, progress);
       // Persistent relation has a small bidirectional glyph; travelling badges encode lifecycle direction.
-      const next = arcPoint(stroke.from, stroke.to, stroke.progress + 0.01);
+      const next = arcPoint(stroke.from, stroke.to, progress + 0.01);
       const rotation = stroke.kind === "delegation" ? Math.atan2(next.y - point.y, next.x - point.x) : 0;
-      this.badge(stroke.id, stroke.kind === "coordination" ? "↔" : stroke.kind === "handoff" ? "✓" : "→", point, color, stroke.quiet ? 0.45 : 0.9, used, rotation);
+      this.badge(stroke.id, stroke.kind === "coordination" ? "↔" : stroke.kind === "handoff" ? "✓" : "→", point, color, stroke.quiet || emphasis === "quiet" ? 0.45 : 1, used, rotation);
     }
     for (const blocked of frame.blocked) {
       this.badge(`blocked:${blocked.id}`, "!", { x: blocked.point.x + 28, y: blocked.point.y - 38 }, 0x854a3d, 1, used);
@@ -131,7 +143,7 @@ export class InteractionLayer {
 
   destroy(): void {
     this.badges.clear();
-    this.agents = []; this.cues = [];
+    this.agents = []; this.cues = []; this.focus = new Map();
     this.connectors.destroy({ children: true });
     this.markers.destroy({ children: true });
   }

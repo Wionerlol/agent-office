@@ -249,3 +249,18 @@ GOOD: Reviewer enters ERROR, receives a brief ring and a persistent `!` while ER
 BAD: infer delegation from similar tasks, animate all children on snapshots, retain organization lines, expose questions/errors in bubbles, or reroute parents for transient cues.
 
 See controlled normalized browser evidence: [delegation](images/interaction-delegation-midpoint.png), [moving coordination](images/interaction-coordination-moving.png), [coordination and user attention](images/interaction-coordination.png), [handoff](images/interaction-handoff.png), [simultaneous signals](images/interaction-multiple-blocked.png), [expired emphasis](images/interaction-blocked-expired.png). Start/midpoint/expired delegation states are also retained for timing inspection.
+
+
+## Phase 4C daily inspection examples
+
+GOOD: select Tester. Tester gets a warm full semantic label; its Lead parent and current waiting relation stay emphasized. Backend/research peers are quieter even when they share a repository, while Frontend NEEDS YOU and Reviewer ERROR remain obvious. Select Lead in the Parent Agent row, then use the Children/Waiting on buttons to return to Tester.
+
+GOOD: crowded Test Lab keeps a selected Test Partner label readable without reseating the team. Hover exposes full semantic name and role/status; keyboard Team buttons provide the same inspection with Tab, Enter/Space and Escape. Panel close restores focus to that Agent's Team button.
+
+GOOD: an active selected handoff becomes clearer but expires at its original deadline. A reconnect snapshot still generates no historical animation. A filtered target has no connector/navigation name; the panel says Not in this view.
+
+GOOD: reduced-motion mode retains static ?, !, → and ✓, with short route travel and original cue lifetime. At 800/1024px, details appear below the complete scaled office; at 1280/1440px, they remain beside it.
+
+BAD: selection changes seats/routes; same role/task/repository creates a team; focus hides a user-input waiter; hover exposes raw command/question/error content; selection restarts delegation; ordinary parentage becomes permanent graph lines.
+
+Reviewed normalized browser evidence: [whole office](images/readability-whole-office.png), [selected Tester](images/readability-selected-tester.png), [selected Lead](images/readability-selected-lead.png), [crowded selected label](images/readability-crowded-selected.png), [800px layout](images/readability-800.png), [reduced-motion delegation](images/readability-reduced-delegation.png).
