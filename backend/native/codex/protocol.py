@@ -6,22 +6,33 @@ from pathlib import Path
 from typing import Any
 
 from backend.models import AgentState
+from backend.native.codex.profiles import PAGINATED_V1, PROFILES, ProtocolProfile, profile_for
 from backend.observer.tools import state_for_command
 
-# Exact reviewed versions, not a guess about future experimental protocol compatibility.
-SUPPORTED_VERSIONS = frozenset({"0.159.3", "0.160.0", "0.160.1"})
-READ_METHODS = frozenset(
-    {"initialize", "thread/read", "thread/resume", "thread/turns/list", "thread/items/list"}
-)
+SUPPORTED_VERSIONS = frozenset(PROFILES)
+READ_METHODS = PAGINATED_V1.read_methods
 
 
 class NativeUnavailable(RuntimeError):
     pass
 
 
-def require_version(version: str) -> None:
-    if version not in SUPPORTED_VERSIONS:
-        raise NativeUnavailable("Unsupported Codex app-server version")
+class UnsupportedProtocol(NativeUnavailable):
+    pass
+
+
+class NativeConnectionFailure(NativeUnavailable):
+    pass
+
+
+class NativeReadFailure(NativeUnavailable):
+    pass
+
+
+def require_version(version: str) -> ProtocolProfile:
+    if profile := profile_for(version):
+        return profile
+    raise UnsupportedProtocol("Unsupported Codex app-server version")
 
 
 def identifier(value: object) -> str | None:
@@ -81,13 +92,15 @@ class ThreadMetadata:
     waiting: bool
 
     @classmethod
-    def parse(cls, value: dict[str, Any]) -> "ThreadMetadata":
+    def parse(
+        cls, value: dict[str, Any], profile: ProtocolProfile = PAGINATED_V1
+    ) -> "ThreadMetadata":
         status = value.get("status")
         if (
             not identifier(value.get("id"))
             or not isinstance(value.get("cwd"), str)
             or not isinstance(status, dict)
-            or status.get("type") not in {"active", "idle"}
+            or status.get("type") not in profile.thread_states
         ):
             raise NativeUnavailable("Thread is malformed or not already loaded")
         return cls(
@@ -101,9 +114,13 @@ class ThreadMetadata:
         )
 
 
-def parse_event(value: dict[str, Any], workspace: Path) -> Fact | None:
+def parse_event(
+    value: dict[str, Any], workspace: Path, profile: ProtocolProfile = PAGINATED_V1
+) -> Fact | None:
     """Do not retain raw command, prompt, reasoning, diff, output or question content."""
     method = value.get("method")
+    if method not in profile.fact_methods:
+        return None
     params = value.get("params")
     if not isinstance(params, dict) or not (thread := identifier(params.get("threadId"))):
         return None
@@ -120,7 +137,7 @@ def parse_event(value: dict[str, Any], workspace: Path) -> Fact | None:
         )
     if method == "thread/status/changed":
         status = params.get("status")
-        if isinstance(status, dict) and status.get("type") in {"active", "idle"}:
+        if isinstance(status, dict) and status.get("type") in profile.thread_states:
             return Fact(
                 "status",
                 thread,
@@ -131,7 +148,7 @@ def parse_event(value: dict[str, Any], workspace: Path) -> Fact | None:
         data = params.get("turn")
         if isinstance(data, dict) and identifier(data.get("id")):
             phase = data.get("status")
-            if phase in {"inProgress", "completed", "failed", "interrupted"}:
+            if phase in profile.turn_states:
                 return Fact("turn", thread, data["id"], phase=phase)
     if method not in {"item/started", "item/completed"}:
         return None
@@ -140,6 +157,8 @@ def parse_event(value: dict[str, Any], workspace: Path) -> Fact | None:
         return None
     phase = "start" if method == "item/started" else "finish"
     item_type = item.get("type")
+    if item_type not in profile.item_types:
+        return None
     if item_type == "subAgentActivity":
         child = identifier(item.get("agentThreadId"))
         kind = item.get("kind")
@@ -196,3 +215,23 @@ def parse_event(value: dict[str, Any], workspace: Path) -> Fact | None:
             )
     # Reasoning is deliberately diagnostic-only: absence is not negative evidence.
     return None
+
+
+def project_event(
+    value: dict[str, Any], workspace: Path, profile: ProtocolProfile = PAGINATED_V1
+) -> Fact | None:
+    fact = parse_event(value, workspace, profile)
+    method = value.get("method")
+    params = value.get("params", {})
+    item = params.get("item") if isinstance(params, dict) else None
+    relevant = method in profile.fact_methods and (
+        method not in {"item/started", "item/completed"}
+        or not isinstance(item, dict)
+        or (
+            item.get("type") in profile.item_types
+            and (item.get("type") != "collabAgentToolCall" or item.get("tool") == "wait")
+        )
+    )
+    if relevant and fact is None:
+        raise NativeUnavailable("Malformed selected native fact")
+    return fact

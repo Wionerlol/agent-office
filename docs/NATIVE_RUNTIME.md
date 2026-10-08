@@ -29,16 +29,27 @@ native:
 
 The executable is used only for `codex app-server daemon version`. Optional socket_path must equal the running daemon's reported socket. The integration never starts/restarts a daemon. There is no automatic CWD-based registration.
 
-Register an Office Agent using the existing office-run/DevRouter path, then supply its known native UUID explicitly. A controlled launcher can pass the UUID it obtained from thread/start; a known `codex resume UUID` identifies the resumed thread. Ordinary DevRouter currently supplies Office identity but not a native UUID handshake; do not scrape its terminal or guess from same-repository sessions. Obtain the UUID explicitly through the native client/operator and use the API:
+Native observation binds automatically after registration when launch identity is explicit:
 
 ```bash
-curl --fail-with-body http://127.0.0.1:8000/api/native/codex/bind \
-  -H 'Content-Type: application/json' \
-  -d '{"office_agent_id":"lead","thread_id":"KNOWN_NATIVE_UUID","child_definition_id":"tester"}'
+uv run office-run codex --id lead --native-child-definition tester resume KNOWN_UUID
 
-curl --fail-with-body http://127.0.0.1:8000/api/native/codex
-curl --fail-with-body -X POST http://127.0.0.1:8000/api/native/codex/reconnect/lead
+# Installed DevRouter passes its explicit resume argument through office-run:
+devrouter --office -- resume KNOWN_UUID
+
+# An explicit launcher can alternatively supply AGENT_OFFICE_NATIVE_THREAD_ID.
+# For a currently registered agent, use the local CLI rather than curl:
+uv run agent-office native bind lead KNOWN_UUID --child-definition tester
+uv run agent-office native status
+uv run agent-office native reconnect lead
+uv run agent-office native validate --thread KNOWN_UUID
 ```
+
+The wrapper removes its leading `--` delimiter before forwarding provider arguments. A literal resume UUID, --native-thread, or AGENT_OFFICE_NATIVE_THREAD_ID is explicit identity, not discovery; conflicting supplied/resume UUIDs fail before launch. Native child definition may also come from AGENT_OFFICE_NATIVE_CHILD_DEFINITION. The background handshake checks native enablement, supplies the exact registered started_at generation and retries for at most 30 seconds without blocking the TUI. Exit cancels the handshake; absent native integration leaves ordinary execution working. No nonce is invented or placed in prompts/configuration.
+
+**Direct office-run:** explicit `resume UUID` automatically binds; new TUI/picker/session-name/--last has no deterministic binding and stays unbound. **DevRouter:** the installed tmux → office-run → Codex path supports the same literal-resume handshake and inherited explicit UUID. Its normal fresh-session path also remains unbound. A known UUID is still required from the launcher/operator when launching a fresh session; `native bind` removes the HTTP/JSON step but does not discover that UUID. Neither path guesses among same-workspace candidates. UUIDs obtained from controlled structured thread creation are experiment evidence, not automatic discovery of ordinary users' threads.
+
+Native CLI HTTP commands require a loopback http server; override it before the subcommand, e.g. `agent-office native --server http://127.0.0.1:8001 status`. Bind fetches the Office generation and submits it; stale registration/restart during the handshake returns a conflict. The existing bind API retains optional expected_generation for backward compatibility, while all new CLI/wrapper handshakes provide it.
 
 The optional child_definition_id is an explicit organizational assignment to children of this binding, inherited by their children. It is never guessed from prompts, nicknames or current tools. Existing project scope/definition matching remains in SemanticIdentityResolver. Omit it for generic native subagent fallback names; this v1 does not automatically decide which child is Tester versus Reviewer.
 
@@ -48,15 +59,15 @@ Bindings retain the Office instance's started_at generation and survive reconnec
 
 ## Read-only observation and version compatibility
 
-Reviewed exact app-server versions are 0.159.3, 0.160.0 and 0.160.1. There is no open-ended compatible-version range. Phase 3A supplied actual facts for the first two; Phase 3B production smoke exercises daemon 0.160.1 with CLI 0.160.0. Local 0.160.0/0.160.1 schemas have matching ThreadItem, SubAgentActivityKind, Turn and ThreadItemEntry definitions. The initialize userAgent must agree with daemon discovery; unknown versions or mismatches fail closed to fallbacks. Older profiles are not claimed to have undergone the new production smoke.
+Reviewed exact app-server versions are 0.159.3, 0.160.0, 0.160.1 and 0.161.0, selected through profiles.py. There is no open-ended compatible-version range. Phase 3A supplied actual facts for the first two; Phase 3B production smoke exercises daemon 0.160.1 with CLI 0.160.0. Local 0.160.0/0.160.1 schemas have matching ThreadItem, SubAgentActivityKind, Turn and ThreadItemEntry definitions. The v1.1 review additionally compares 0.161.0 Thread/ThreadStatus/Turn/ThreadItem/ThreadItemEntry/SubAgentActivityKind against 0.160.1 and exercises the consumed subset on the actual daemon. The initialize userAgent must agree with daemon discovery; unknown versions or mismatches fail closed to fallbacks. Older profiles are not claimed to have undergone the new production smoke.
 
 Only initialize, thread/read, thread/resume(excludeTurns=true), thread/turns/list and thread/items/list are allowed. No configuration override is permitted on resume. Initialized is the only notification the consumer sends; it never responds to server requests, approves, starts/interrupts turns, changes TUI settings, loads an unloaded thread or stops the daemon. Closing the diagnostic/production socket is not agent death. The WebSocket dependency already existed transitively; it is now declared directly (>=13,<18), with the locked version unchanged.
 
-Reconnect first checks loaded metadata. It reconciles structural snapshots of the selected thread and confirmed children; initial subscription looks at the latest turn, while reconnect scans back to its last observed turn (maximum 32 turns). Items are paginated with a maximum 800 per turn; free-text history is projected away before retaining facts. Past completed, unbound children are not manufactured as new agents. Known loaded children continue independently even after their Office parent exits. Oversized catch-up, malformed required structures, queue overflow or unavailable child metadata degrade safely, with no unsupported inferred result.
+Reconnect first checks loaded metadata. It reconciles structural snapshots of the selected thread and confirmed children; initial subscription looks at the latest turn, while reconnect scans back to its last observed turn (maximum 32 turns). Items are paginated with a maximum 800 per turn; free-text history is projected away before retaining facts. Past completed, unbound children are not manufactured as new agents. Known loaded children continue independently even after their Office parent exits. Oversized catch-up, malformed selected structures, queue overflow or unavailable metadata degrade the affected thread, without inferring a result. Typed transport loss/timeout and unknown handshake affect that root connection. Children multiplex on the existing root connection; sibling/root reads continue after a child rejection. Per-thread reconstruction retries use the same socket. A root read failure does not release independently observed children; root transport loss releases its connection scope. Unrelated roots remain isolated. Child reconnect requests retry that child without closing the root socket.
 
 ## Replay, concurrency and waiting
 
-The bounded LRU event key is `(thread, turn, item, request, fact kind, lifecycle phase, child)`. Request resolution is correlated to the recorded request's turn/item; request-ID reuse in a later turn does not inherit old resolution. Separate completed-item and retired-turn caches prevent a replayed start from reviving completed activity. Pending-request replay reconstructs waiting after release/reconnect but does not repeatedly broadcast an unchanged display. Status notifications have no stable event ID: derived display equality deduplicates them rather than caching a permanent "idle" key. Event/completion caches hold 8,192 entries each, retired turns 1,024, and the event queue 512 structural facts. Active items are limited to 256 per thread.
+The bounded LRU event key is `(thread, turn, item, request, fact kind, lifecycle phase, child)`. Request resolution is correlated to the recorded request's turn/item; request-ID reuse in a later turn does not inherit old resolution. Separate completed-item and retired-turn caches prevent a replayed start from reviving completed activity. Pending-request replay reconstructs waiting after release/reconnect but does not repeatedly broadcast an unchanged display. Status notifications have no stable event ID: derived display equality deduplicates them rather than caching a permanent "idle" key. Event/completion caches hold 8,192 entries each, retired turns 1,024, and the event queue 512 structural facts per root connection (128 per thread). Pending child retries are bounded to 1,024 structural facts. Active items are limited to 256 per thread.
 
 Current activities are reconciled centrally in this order:
 
@@ -83,7 +94,7 @@ A successful child turn becomes DONE, failed turn ERROR, with tool/wait context 
 
 ## Remaining limits and next step
 
-User-input waiting is confirmed in Plan mode; normal conversational questions, approval waits and remote MCP semantics are not universally normalized. Stable native roles were null in real smoke. Child waits with absent/multiple recipients remain partial, and natural-language results/task changes are not inferred. Automatic DevRouter UUID handshake, broad protocol compatibility, per-thread error isolation, catch-up beyond bounded limits and long-running reuse deserve Phase 3B v2 work. Phase 4 should follow that reliability work; rooms/org charts/NLP/filesystem observers remain out of scope.
+User-input waiting is confirmed in Plan mode; normal conversational questions, approval waits and remote MCP semantics are not universally normalized. Stable native roles were null in real smoke. Child waits with absent/multiple recipients remain partial, and natural-language results/task changes are not inferred. Fresh-session launch correlation, broad protocol compatibility, catch-up beyond bounded limits and long-running reuse remain future work. Explicit-resume DevRouter handshakes and per-thread failure isolation are implemented in v1.1. Phase 4 should follow that reliability work; rooms/org charts/NLP/filesystem observers remain out of scope.
 
 See docs/ACCEPTANCE.md for exact final checks and real-runtime evidence. Synthetic transport/history tests verify contracts only, not provider capabilities.
 
@@ -112,3 +123,17 @@ The final run recorded 37 normalized structural messages and passed explicit bin
 ![Waiting details](images/native-waiting-details.png)
 
 The screenshot is a separate normalized UI fixture demonstrating role, responsibilities, parent and user-input waiting. It is not provider capability evidence. No probe logs, owned UUIDs, disposable repository paths or personal configuration are checked in.
+
+## v1.1 diagnostic contract
+
+GET /api/native/codex is a local developer control-plane API. It reports enabled, provider, version, protocol (unknown/supported/unsupported), aggregate health, bindings and unbound Office IDs. Binding rows retain thread_id/root_thread_id for operator ownership checks and add status, fallback_active, failure_scope, failure_category and failure_type. The latest binding failure is categorical and bounded; pending child read failures appear separately until native parent metadata is corroborated. No native UUID enters the frontend/domain model. No free-form native error text is returned.
+
+Health is independent of AgentState: disabled, unbound, connecting, connected, reconnecting, degraded, unsupported, unavailable or inactive. A connection can remain connected while a child is degraded. fallback_active means current accepted status evidence is non-native or explicitly released, rather than asserting that a process fallback can observe every daemon tool. Terminal outcomes remain protected. Repeated failed recovery releases evidence only once, clears unconfirmed user waiting, and never refreshes last_active_at just to show a retry.
+
+`native validate` reports only version/schema, completed check names and a failed-check category. With no thread it checks discovery/initialize; with an explicit already-loaded thread it checks read, no-override subscription, latest-turn and item page shapes. Empty history cannot prove item RPC compatibility and that check is omitted. Unknown versions report review_required and remain production-disabled; inspect the installed generated schemas and collect owned real evidence before adding a reviewed profile. Validation is diagnostic, not a blanket guarantee about all runtime behavior.
+
+## v1.1 runtime evidence
+
+Owned disposable runs exercised CLI 0.160.0 with daemon 0.161.0. The direct wrapper and actual installed DevRouter each resumed a separately owned, explicitly supplied thread in the same workspace and automatically bound the correct Office ID without a user bind HTTP call. A first read-only turn materialized each resumable rollout. CLI status and selected-thread validate succeeded, including all reviewed read RPC checks.
+
+The final run exits 0 with 44 normalized structural messages. Actual apply_patch, pytest/rg, Plan input waiting/resolution, child spawn/parent/Tester definition precedence (native nickname Kepler) and terminal cleanup remained observable. Read-only child hydration failure was deliberately injected after real child creation: only that child degraded while its root and the DevRouter root stayed connected. Closing the direct root consumer's actual observer socket released its evidence; the independent DevRouter thread still emitted native SEARCHING from a real rg command. CLI reconnect restored the direct connection without duplicate children. Synthetic fault injection and normalized fallback input are labeled as such, not additional provider capabilities. The observer never answered inputs or started turns; the separate fixture owner initiated its own turns/answers. Shared daemon configuration/lifecycle and unrelated sessions were unchanged. Full private captures/helpers remain ignored under runtime/probe; no UUIDs, prompts, question text, output or credentials are checked in.

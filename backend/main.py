@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 
 import uvicorn
 
@@ -16,6 +17,11 @@ app = create_app(settings)
 
 
 def run() -> None:
+    if sys.argv[1:2] == ["native"]:
+        from backend.native_cli import main
+
+        main(sys.argv[2:])
+        return
     uvicorn.run("backend.main:app", host=settings.server.host, port=settings.server.port)
 
 

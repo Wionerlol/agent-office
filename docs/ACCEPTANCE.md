@@ -1,5 +1,46 @@
 # Agent Office Acceptance Criteria
 
+## Phase 3B v1.1 Native Integration Hardening — COMPLETE
+
+- Explicit literal-resume or supplied-UUID launch binding works without a user HTTP request; ambiguous/fresh/picker/name/--last cases remain unbound. Background retries preserve the same Office generation and cancel on exit; conflicts fail closed. No CWD/process/terminal guessing.
+- Direct office-run and the actual installed DevRouter path both exercise literal-resume handshakes. Fresh-session automatic UUID discovery is **not supported**; one explicit native bind CLI command is the remaining operator workflow once a UUID is known.
+- Selected-thread parse/read/hydration/reconciliation/backlog failures release only that thread and reconstruct on the existing root socket. Shared connection loss/timeout or unsupported protocol releases the root connection's scope; unrelated roots stay native. Child reconnect does not close its root socket.
+- Exact ProtocolProfile centralizes reviewed version/RPC/fact/item/discriminator assumptions. Unknown/mismatched versions fail closed. The independently upgraded daemon 0.161.0 is added only after generated schema comparison, read-only validation and real owned smoke.
+- Local CLI status/bind/reconnect/validate and GET diagnostics report protocol, health, binding ownership, fallback, failure category/scope/type and bounded unbound-child failures without native content. Integration health stays separate from AgentState; frontend and OfficeScene are unchanged.
+- All v1 native activity, waiting, semantic identity, child lifecycle, replay, terminal protection and fallback regressions remain; OfficeRuntime provenance policy is unchanged. No Phase 4 work, database, filesystem observer, NLP or native answering/control is added.
+
+### Local deterministic verification (2026-10-08 Asia/Singapore)
+
+- `uv run pytest -q`: **210 passed**, including **32 new hardening contracts** and all 178 prior regressions; two existing Starlette/httpx/anyio deprecation warnings.
+- `uv run ruff check backend main.py`: passed.
+- `cd frontend && npm test -- --reporter=dot`: **29 passed / 12 files**.
+- `cd frontend && npm run lint`: passed.
+- `cd frontend && npm run build`: passed.
+- `git diff --check`: passed.
+- Required hosted checks: **Backend** and **Frontend** must pass on the final PR commit; their authoritative results are recorded in the PR/check run rather than inferred from local execution. All deterministic cases run in CI; the existing ripgrep installation supports credential-free process regressions. Real Codex/DevRouter smoke is excluded from hosted CI.
+
+Contracts cover explicit launch identity/ambiguity/conflicts, DevRouter delimiter/environment, bounded handshake retry, generation swap during native read and simultaneous binding races, child/root/live-consumer isolation and recovery, fallback authority, child-only reconnect, protocol profiles/unknown versions, malformed selected facts, safe validation failures and disabled/unbound/degraded health. A v1 unknown-version fixture deliberately moves from 0.161.0 to 99.0.0 because 0.161.0 is now explicitly reviewed; its no-transport assertion remains intact. No assertion is skipped or weakened.
+
+### Real owned runtime evidence
+
+Final disposable run uses CLI **0.160.0**, shared daemon **0.161.0**, two owned native roots in the **same** workspace, a real direct office-run TUI and the actual installed DevRouter CLI → tmux → office-run → TUI. A separate fixture owner obtains explicit UUIDs from its own structured creation and initiates its own turns/answers. Neither the production observer nor the wrapper answers/approves/starts/interrupts turns or changes daemon/TUI settings.
+
+The final run exits 0 with **44 normalized structural messages** and verifies:
+
+1. Direct explicit resume automatically binds the registered Office ID; no user bind HTTP call.
+2. Actual DevRouter explicit resume automatically binds its different Office ID to its different root UUID despite the shared workspace.
+3. CLI status and selected-thread validate succeed with discovery, initialize, read, no-override subscribe, turns/list and items/list checks.
+4. Actual apply_patch 41→42, rg and pytest produce CODING/SEARCHING/TESTING; modified file checked independently.
+5. Plan requestUserInput produces WAITING/user_input; pending reconnect reconstructs it, fixture-owner resolution clears it.
+6. Real native child **Kepler** displays project-defined **Tester**/tester/Run tests with correct parent. Exactly one child appears across reconnect; successful completion displays DONE before grace cleanup.
+7. Injected child metadata-read failure degrades that child while its parent and the independent DevRouter root stay connected; recovery/reconnect preserves identity. This is labeled fault injection, not a claimed spontaneous provider failure.
+8. Closing the direct root consumer's actual observation connection leaves the DevRouter root usable; its subsequent real rg produces native SEARCHING. Controlled normalized fallback input restores direct-root TESTING; this input is a contract fixture, not additional process/native capability proof.
+9. CLI reconnect restores direct-root connected status without duplicate children. HTTP frontend serving remains available; unchanged frontend behavior is covered by its regressions and prior v1 browser evidence, not a new v1.1 visual claim.
+
+Two controlled hardening runs pass; full logs/helpers/manifests remain ignored. The small fixture-driver implementation errors and one unsupported-version fixture update were corrected before final verification; passing results correspond to the reviewed final implementation. Older profiles retain historical Phase 3A/v1 evidence; this new live smoke covers 0.161.0 only. Fresh-session nonce correlation, universal THINKING/approval waits/child waits, arbitrary native roles, huge catch-up and indefinite child reuse remain unsupported/partial. See NATIVE_RUNTIME.md and Decisions 24–27.
+
+Phase 1 COMPLETE; Phase 2 COMPLETE; Phase 3A COMPLETE; Phase 3B v1 COMPLETE; Phase 3B v1.1 COMPLETE. Phase 4 NOT YET IMPLEMENTED.
+
 ## Phase 3B Native Runtime Adapter v1 — COMPLETE
 
 - Explicit registered Office ID/native UUID binding, loaded-thread workspace validation, conflict/generation rejection, sticky reconnect and child binding are covered. CWD-only identity is rejected.

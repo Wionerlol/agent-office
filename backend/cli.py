@@ -9,6 +9,7 @@ from uuid import uuid4
 
 from backend.config import Settings
 from backend.models import Agent, AgentEvent, AgentEventType, AgentState, EventSource
+from backend.native_cli import BindingHandshake, explicit_thread
 from backend.observer.git import GitObserver
 from backend.runtime.emitters import HttpEventEmitter
 from backend.state.identity import responsibilities_from_environment
@@ -32,6 +33,7 @@ def run_wrapped(
     parent_agent_id: str | None = None,
     definition_id: str | None = None,
     responsibilities: list[str] | None = None,
+    native_handshake: BindingHandshake | None = None,
 ) -> int:
     repository = repository.resolve()
     git = GitObserver(repository).snapshot()
@@ -95,7 +97,13 @@ def run_wrapped(
             payload={"from": "starting", "to": "thinking"},
         )
     )
-    exit_code = process.wait()
+    if native_handshake:
+        native_handshake.start(agent)
+    try:
+        exit_code = process.wait()
+    finally:
+        if native_handshake:
+            native_handshake.close()
     if exit_code:
         emitter(
             AgentEvent(
@@ -149,6 +157,8 @@ def build_parser(settings: Settings | None = None) -> argparse.ArgumentParser:
     parser.add_argument("--definition", dest="definition_id")
     parser.add_argument("--responsibility", dest="responsibilities", action="append")
     parser.add_argument("--task")
+    parser.add_argument("--native-thread")
+    parser.add_argument("--native-child-definition")
     parser.add_argument("--repo", type=Path, default=Path.cwd())
     parser.add_argument("--server", default=_server_endpoint(settings))
     return parser
@@ -159,7 +169,27 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser = build_parser(settings)
     args, agent_args = parser.parse_known_args(argv)
     emitter = HttpEventEmitter(args.server)
+    if agent_args and agent_args[0] == "--":
+        agent_args = agent_args[1:]  # Wrapper delimiter, including DevRouter's launch format.
     try:
+        thread = (
+            explicit_thread(
+                [args.provider, *agent_args],
+                args.native_thread or os.environ.get("AGENT_OFFICE_NATIVE_THREAD_ID"),
+            )
+            if args.provider == "codex"
+            else None
+        )
+        handshake = (
+            BindingHandshake(
+                args.server,
+                thread,
+                args.native_child_definition
+                or os.environ.get("AGENT_OFFICE_NATIVE_CHILD_DEFINITION"),
+            )
+            if thread
+            else None
+        )
         exit_code = run_wrapped(
             [args.provider, *agent_args],
             name=args.name or os.environ.get("AGENT_OFFICE_NAME") or args.provider.title(),
@@ -172,6 +202,7 @@ def main(argv: Sequence[str] | None = None) -> None:
             parent_agent_id=args.parent_agent_id,
             definition_id=args.definition_id,
             responsibilities=args.responsibilities,
+            native_handshake=handshake,
         )
     except FileNotFoundError as error:
         parser.error(f"executable not found: {error.filename}")

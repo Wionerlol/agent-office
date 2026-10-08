@@ -266,9 +266,11 @@ class CodexNativeAdapter:
         finally:
             self.cleanup_tasks.pop(thread, None)
 
-    async def release(self, root: str) -> None:
+    async def release(self, root: str, *, thread_only: bool = False) -> None:
         for thread, binding in self.bindings.by_thread.items():
-            if binding.root_thread_id != root or not self.live(thread):
+            if (thread != root if thread_only else binding.root_thread_id != root) or not self.live(
+                thread
+            ):
                 continue
             activity = self.activity(thread)
             activity.clear_active()

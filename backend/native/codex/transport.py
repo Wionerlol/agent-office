@@ -9,7 +9,13 @@ from typing import Any, Self
 
 from websockets.asyncio.client import ClientConnection, unix_connect
 
-from backend.native.codex.protocol import READ_METHODS, NativeUnavailable, require_version
+from backend.native.codex.protocol import (
+    NativeConnectionFailure,
+    NativeReadFailure,
+    NativeUnavailable,
+    UnsupportedProtocol,
+    require_version,
+)
 
 
 async def discover(codex: str) -> tuple[str, Path]:
@@ -37,6 +43,7 @@ async def discover(codex: str) -> tuple[str, Path]:
     if (
         value.get("status") != "running"
         or not isinstance(version, str)
+        or not re.fullmatch(r"\d+\.\d+\.\d+", version)
         or not isinstance(path, str)
     ):
         raise NativeUnavailable("No running local Codex daemon")
@@ -52,6 +59,7 @@ class ReadOnlyClient:
     ) -> None:
         self.path = path
         self.version = version
+        self.profile = None
         self.receive = receive
         self.socket: ClientConnection | None = None
         self.reader: asyncio.Task[None] | None = None
@@ -59,7 +67,7 @@ class ReadOnlyClient:
         self.counter = 0
 
     async def __aenter__(self) -> Self:
-        require_version(self.version)
+        self.profile = require_version(self.version)
         self.socket = await unix_connect(
             self.path,
             uri="ws://localhost/",
@@ -80,7 +88,7 @@ class ReadOnlyClient:
                 r"(?:^|\s)codex-tui/(\d+\.\d+\.\d+)(?:\s|$)", str(result.get("userAgent", ""))
             )
             if not match or match[1] != self.version:
-                raise NativeUnavailable("Daemon handshake version mismatch")
+                raise UnsupportedProtocol("Daemon handshake version mismatch")
             await self.socket.send(json.dumps({"method": "initialized"}))
         except BaseException:
             await self.__aexit__()
@@ -106,26 +114,30 @@ class ReadOnlyClient:
         finally:
             for future in self.pending.values():
                 if not future.done():
-                    future.set_exception(NativeUnavailable("Native stream disconnected"))
+                    future.set_exception(NativeConnectionFailure("Native stream disconnected"))
 
     async def request(self, method: str, params: dict[str, Any]) -> dict[str, Any]:
-        if method not in READ_METHODS:
+        profile = self.profile or require_version(self.version)
+        if method not in profile.read_methods:
             raise ValueError("Native consumer permits only read/subscription requests")
         if method == "thread/resume" and set(params) != {"threadId", "excludeTurns"}:
             raise ValueError("Native subscription cannot change configuration")
         if self.reader is None or self.reader.done() or self.socket is None:
-            raise NativeUnavailable("Native connection unavailable")
+            raise NativeConnectionFailure("Native connection unavailable")
         self.counter += 1
         key = self.counter
         future = asyncio.get_running_loop().create_future()
         self.pending[key] = future
         try:
             await self.socket.send(json.dumps({"id": key, "method": method, "params": params}))
-            async with asyncio.timeout(10):
-                response = await future
+            try:
+                async with asyncio.timeout(10):
+                    response = await future
+            except TimeoutError:
+                raise NativeConnectionFailure("Native read timed out") from None
             if "error" in response or not isinstance(response.get("result"), dict):
                 # Never propagate/log native error text, which may contain private content.
-                raise NativeUnavailable("Native read request rejected")
+                raise NativeReadFailure("Native read request rejected")
             return response["result"]
         finally:
             self.pending.pop(key, None)

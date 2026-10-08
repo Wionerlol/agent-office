@@ -66,3 +66,5 @@ Examples:
 - PR ready -> review-oriented behavior.
 
 These remain future extensions. The current implementation adds semantic identity on top of the completed runtime-state foundation.
+
+Phase 3B v1.1 hardens daily operation: explicit launch identity enables a low-friction binding handshake, per-thread degradation preserves unrelated work, and local diagnostics distinguish integration health from agent activity. Fresh-session correlation remains unsupported without an explicit native identity; Phase 4 spatial work has not begun.

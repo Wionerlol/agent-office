@@ -20,7 +20,7 @@ Resolve conflicts using this priority:
 
 Do not treat the older `agent-office-PROJECT.md` as authoritative when it conflicts with the files above. It remains useful historical context.
 
-Project phases: State Fidelity COMPLETE; Semantic Agent Model COMPLETE; Phase 3A Native Runtime Capability Probe COMPLETE; Phase 3B Native Adapter v1 COMPLETE. Read `docs/runtime-probe/` before proposing native normalization.
+Project phases: State Fidelity COMPLETE; Semantic Agent Model COMPLETE; Phase 3A Native Runtime Capability Probe COMPLETE; Phase 3B Native Adapter v1 COMPLETE; Phase 3B v1.1 Integration Hardening COMPLETE. Read `docs/runtime-probe/` before proposing native normalization.
 
 Implementation principles:
 - preserve completed State Fidelity and Semantic Agent Model, including EventSource, status provenance/arbitration, and SemanticIdentityResolver;

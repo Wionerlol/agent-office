@@ -1,6 +1,8 @@
 """Opt-in consumer of explicitly selected, already-loaded daemon threads."""
 
 import asyncio
+import re
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -8,15 +10,23 @@ from backend.adapters.codex_native import CodexNativeAdapter
 from backend.config import CodexNativeSettings
 from backend.models import AgentState
 from backend.native.codex.bindings import BindingConflict, BindingRegistry, NativeThreadBinding
+from backend.native.codex.health import NativeFailure, NativeHealth
+from backend.native.codex.profiles import PAGINATED_V1, profile_for
 from backend.native.codex.protocol import (
     Fact,
+    NativeConnectionFailure,
     NativeUnavailable,
     ThreadMetadata,
-    parse_event,
+    UnsupportedProtocol,
+    project_event,
     require_version,
 )
 from backend.native.codex.transport import ReadOnlyClient, discover
 from backend.runtime.office import OfficeRuntime
+
+
+class NativeBacklog(NativeUnavailable):
+    pass
 
 
 class CodexNativeConsumer:
@@ -33,27 +43,155 @@ class CodexNativeConsumer:
         self.validation_roots: dict[str, tuple[Path, ...]] = {}
         self.lock = asyncio.Lock()
         self.stopping = False
+        self.failure_details: dict[str, NativeFailure] = {}
+        self.pending_children: dict[str, Fact] = {}
+        self.profile = PAGINATED_V1
+        self.last_binding_failure: dict[str, str] | None = None
 
     def status(self) -> dict[str, object]:
+        protocol = (
+            "supported"
+            if profile_for(self.version or "")
+            else ("unsupported" if self.version else "unknown")
+        )
+        bindings = []
+        for binding in self.bindings.by_thread.values():
+            thread = binding.thread_id
+            live = self.adapter.live(thread)
+            state = self.states.get(thread, "connecting") if live else "inactive"
+            detail = self.failure_details.get(thread)
+            evidence = self.runtime.status_evidence(binding.office_agent_id) if live else None
+            bindings.append(
+                {
+                    "office_agent_id": binding.office_agent_id,
+                    "thread_id": thread,
+                    "root_thread_id": binding.root_thread_id,
+                    "status": state,
+                    "fallback_active": bool(
+                        evidence and (evidence.source.value != "native" or evidence.released)
+                    ),
+                    "failure_type": detail.failure_type if detail else None,
+                    "failure_scope": detail.scope if detail else None,
+                    "failure_category": detail.category if detail else None,
+                }
+            )
+        unbound = [
+            agent.id
+            for agent in self.runtime.registry.all()
+            if agent.provider == "codex" and agent.id not in self.bindings.by_agent
+        ]
+        states = {b["status"] for b in bindings}
+        states.update(self.states.get(thread) for thread in self.pending_children)
+        health = (
+            "disabled"
+            if not self.settings.enabled
+            else (
+                "unsupported"
+                if protocol == "unsupported" or "unsupported" in states
+                else "degraded"
+                if "degraded" in states
+                else "reconnecting"
+                if "reconnecting" in states
+                else "unavailable"
+                if "unavailable" in states
+                else "connecting"
+                if "connecting" in states
+                else "connected"
+                if "connected" in states
+                else "inactive"
+                if bindings and not unbound
+                else "unbound"
+            )
+        )
         return {
             "enabled": self.settings.enabled,
+            "provider": "codex",
             "version": self.version,
-            "bindings": [
+            "protocol": protocol,
+            "health": NativeHealth(health).value,
+            "last_binding_failure": self.last_binding_failure,
+            "bindings": bindings,
+            "unbound_office_agents": unbound,
+            "unbound_children": [
                 {
-                    "office_agent_id": b.office_agent_id,
-                    "thread_id": b.thread_id,
-                    "root_thread_id": b.root_thread_id,
-                    "status": self.states.get(b.root_thread_id),
-                    "failure_type": self.failures.get(b.root_thread_id),
+                    "thread_id": t,
+                    "status": self.states.get(t),
+                    "failure_category": self.failure_details[t].category,
                 }
-                for b in self.bindings.by_thread.values()
+                for t in self.pending_children
+                if t in self.failure_details
             ],
         }
 
+    async def degrade(self, thread: str, error: Exception, scope: str) -> None:
+        if isinstance(error, NativeConnectionFailure):
+            raise error
+        category = (
+            "unsupported_protocol"
+            if isinstance(error, UnsupportedProtocol)
+            else "binding"
+            if isinstance(error, BindingConflict)
+            else "backlog"
+            if isinstance(error, NativeBacklog)
+            else "schema_or_read"
+        )
+        self.states[thread] = "degraded"
+        self.failures[thread] = category
+        self.failure_details[thread] = NativeFailure(scope, category, type(error).__name__)
+        await self.adapter.release(thread, thread_only=True)
+
+    def connected(self, thread: str) -> None:
+        self.states[thread] = "connected"
+        self.failures.pop(thread, None)
+        self.failure_details.pop(thread, None)
+
+    async def safe_consume(self, client: ReadOnlyClient, fact: Fact) -> None:
+        target = fact.child if fact.kind == "child" and fact.child else fact.thread
+        try:
+            await self.consume(client, fact)
+            self.connected(target)
+            self.pending_children.pop(target, None)
+        except Exception as error:
+            if fact.kind == "child":
+                if (
+                    target not in self.pending_children
+                    and len(self.pending_children) >= self.bindings.capacity
+                ):
+                    await self.degrade(
+                        fact.thread, NativeBacklog("Child retry capacity reached"), "root"
+                    )
+                    return
+                self.pending_children[target] = fact
+            await self.degrade(target, error, "child" if target != fact.thread else "thread")
+
+    async def recover(self, client: ReadOnlyClient, root: str) -> None:
+        for thread, binding in list(self.bindings.by_thread.items()):
+            if (
+                binding.root_thread_id != root
+                or self.states.get(thread) != "degraded"
+                or not self.adapter.live(thread)
+            ):
+                continue
+            try:
+                metadata = await self.read_metadata(client, thread)
+                await self.validate_workspace(metadata, binding.office_agent_id)
+                await client.request("thread/resume", {"threadId": thread, "excludeTurns": True})
+                if thread == root:
+                    await self.reconcile(client, root, metadata, asyncio.Queue())
+                else:
+                    await self.hydrate_thread(client, thread)
+                self.connected(thread)
+            except Exception as error:
+                await self.degrade(thread, error, "root" if thread == root else "child")
+        for fact in list(self.pending_children.values()):
+            owner = self.bindings.by_thread.get(fact.thread)
+            if owner and owner.root_thread_id == root:
+                await self.safe_consume(client, fact)
+
     async def connection_info(self) -> tuple[str, Path]:
         version, socket = await discover(self.settings.codex_binary)
-        self.version = version
-        require_version(version)
+        self.version = version if re.fullmatch(r"\d+\.\d+\.\d+", version) else None
+        self.profile = require_version(version)
         if self.settings.socket_path and self.settings.socket_path != socket:
             raise NativeUnavailable("Configured socket does not match the running daemon")
         return version, socket
@@ -63,11 +201,42 @@ class CodexNativeConsumer:
         office_agent_id: str,
         thread_id: str,
         child_definition_id: str | None = None,
+        expected_generation: str | None = None,
+    ) -> NativeThreadBinding:
+        try:
+            binding = await self._bind(
+                office_agent_id,
+                thread_id,
+                child_definition_id,
+                expected_generation,
+            )
+            self.last_binding_failure = None
+            return binding
+        except Exception as error:
+            self.last_binding_failure = {
+                "office_agent_id": office_agent_id,
+                "failure_type": type(error).__name__,
+                "failure_category": "unsupported_protocol"
+                if isinstance(error, UnsupportedProtocol)
+                else "binding"
+                if isinstance(error, (BindingConflict, KeyError))
+                else "source",
+            }
+            raise
+
+    async def _bind(
+        self,
+        office_agent_id: str,
+        thread_id: str,
+        child_definition_id: str | None = None,
+        expected_generation: str | None = None,
     ) -> NativeThreadBinding:
         if not self.settings.enabled:
             raise NativeUnavailable("Codex native integration is disabled")
         async with self.lock:
             agent = self.runtime.registry.get(office_agent_id)
+            if expected_generation and agent.started_at.isoformat() != expected_generation:
+                raise BindingConflict("Stale Office generation handshake")
             if agent.provider != "codex":
                 raise BindingConflict("Only a Codex Office Agent can bind a Codex thread")
             binding = NativeThreadBinding(
@@ -102,7 +271,7 @@ class CodexNativeConsumer:
         value = response.get("thread")
         if not isinstance(value, dict):
             raise NativeUnavailable("Malformed thread metadata")
-        metadata = ThreadMetadata.parse(value)
+        metadata = ThreadMetadata.parse(value, self.profile)
         if metadata.thread != thread:
             raise NativeUnavailable("Native thread identity mismatch")
         return metadata
@@ -130,67 +299,99 @@ class CodexNativeConsumer:
 
     async def _run(self, binding: NativeThreadBinding) -> None:
         root = binding.thread_id
+        first = True
         while not self.stopping and self.has_live_threads(root):
             try:
-                self.states[root] = "connecting"
+                self.states[root] = "connecting" if first else "reconnecting"
+                first = False
                 version, socket = await self.connection_info()
                 queue: asyncio.Queue[Fact] = asyncio.Queue(maxsize=512)
-                workspace = self.workspaces[root]
+                counts: Counter[str] = Counter()
 
                 async def receive(
                     value: dict[str, Any],
-                    scope_path: Path = workspace,
                     events: asyncio.Queue[Fact] = queue,
+                    pending: Counter[str] = counts,
                 ) -> None:
                     params = value.get("params")
                     if not isinstance(params, dict):
                         return
                     thread = params.get("threadId")
-                    if not isinstance(thread, str):
-                        return
-                    selected = self.bindings.by_thread.get(thread)
+                    selected = (
+                        self.bindings.by_thread.get(thread) if isinstance(thread, str) else None
+                    )
                     if (
                         selected is None
                         or selected.root_thread_id != root
                         or not self.adapter.live(thread)
+                        or self.states.get(thread) == "degraded"
                     ):
                         return
-                    fact = await asyncio.to_thread(
-                        parse_event, value, self.workspaces.get(thread, scope_path)
-                    )
-                    if fact is not None:
-                        try:
+                    try:
+                        fact = await asyncio.to_thread(
+                            project_event,
+                            value,
+                            self.workspaces.get(thread, self.workspaces[root]),
+                            self.profile,
+                        )
+                        if fact is not None:
+                            if pending[thread] >= 128 or events.full():
+                                raise NativeBacklog("Thread event backlog exceeded")
                             events.put_nowait(fact)
-                        except asyncio.QueueFull:
-                            raise NativeUnavailable("Native event backlog limit reached") from None
+                            pending[thread] += 1
+                    except Exception as error:
+                        await self.degrade(thread, error, "thread")
 
                 async with ReadOnlyClient(socket, version, receive) as client:
                     if self.adapter.live(root):
-                        metadata = await self.read_metadata(client, root)
-                        await self.validate_workspace(metadata, binding.office_agent_id)
-                        # Check loaded status before resume; never load historical threads.
-                        await client.request(
-                            "thread/resume", {"threadId": root, "excludeTurns": True}
-                        )
-                        await self.reconcile(client, root, metadata, queue)
-                    else:
-                        await self.restore_children(client, root)
-                    self.states[root] = "connected"
-                    self.failures.pop(root, None)
+                        try:
+                            metadata = await self.read_metadata(client, root)
+                            await self.validate_workspace(metadata, binding.office_agent_id)
+                            await client.request(
+                                "thread/resume", {"threadId": root, "excludeTurns": True}
+                            )
+                            await self.reconcile(client, root, metadata, queue)
+                            counts.clear()
+                            self.connected(root)
+                        except Exception as error:
+                            await self.degrade(root, error, "root")
+                    await self.restore_children(client, root)
+                    retry_at = asyncio.get_running_loop().time() + self.settings.reconnect_seconds
                     while self.has_live_threads(root) and not self.stopping:
                         if client.reader is None or client.reader.done():
-                            raise NativeUnavailable("Native source disconnected")
+                            raise NativeConnectionFailure("Native source disconnected")
                         try:
                             fact = await asyncio.wait_for(queue.get(), timeout=0.25)
+                            counts[fact.thread] = max(0, counts[fact.thread] - 1)
+                            if self.states.get(fact.thread) != "degraded":
+                                await self.safe_consume(client, fact)
                         except TimeoutError:
-                            continue
-                        await self.consume(client, fact)
+                            pass
+                        if asyncio.get_running_loop().time() >= retry_at:
+                            await self.recover(client, root)
+                            retry_at = (
+                                asyncio.get_running_loop().time() + self.settings.reconnect_seconds
+                            )
             except asyncio.CancelledError:
+                for thread, owned in self.bindings.by_thread.items():
+                    if owned.root_thread_id == root and self.adapter.live(thread):
+                        self.states[thread] = "inactive" if self.stopping else "reconnecting"
                 raise
             except Exception as error:
-                # No raw exception strings, native error bodies, config or prompts in logs/status.
-                self.states[root] = "unavailable"
-                self.failures[root] = type(error).__name__
+                category = (
+                    "unsupported_protocol"
+                    if isinstance(error, UnsupportedProtocol)
+                    else "connection"
+                )
+                for thread, owned in self.bindings.by_thread.items():
+                    if owned.root_thread_id == root and self.adapter.live(thread):
+                        self.states[thread] = (
+                            "unsupported" if category == "unsupported_protocol" else "unavailable"
+                        )
+                        self.failures[thread] = category
+                        self.failure_details[thread] = NativeFailure(
+                            "connection", category, type(error).__name__
+                        )
             finally:
                 await self.adapter.release(root)
             await asyncio.sleep(self.settings.reconnect_seconds)
@@ -266,6 +467,8 @@ class CodexNativeConsumer:
             turn = turns[0]
             if not isinstance(turn, dict) or not isinstance(turn.get("id"), str):
                 raise NativeUnavailable("Malformed native turn identity")
+            if turn.get("status") not in self.profile.turn_states:
+                raise NativeUnavailable("Unknown native turn status")
             items = await self.items(client, thread, turn["id"])
             if turn.get("status") == "inProgress":
                 await self.adapter.cancel_cleanup(thread)
@@ -314,11 +517,15 @@ class CodexNativeConsumer:
         for thread, binding in list(self.bindings.by_thread.items()):
             if thread == root or binding.root_thread_id != root or not self.adapter.live(thread):
                 continue
-            metadata = await self.read_metadata(client, thread)
-            await self.validate_workspace(metadata, binding.office_agent_id)
-            self.workspaces[thread] = metadata.cwd
-            await client.request("thread/resume", {"threadId": thread, "excludeTurns": True})
-            await self.hydrate_thread(client, thread)
+            try:
+                metadata = await self.read_metadata(client, thread)
+                await self.validate_workspace(metadata, binding.office_agent_id)
+                self.workspaces[thread] = metadata.cwd
+                await client.request("thread/resume", {"threadId": thread, "excludeTurns": True})
+                await self.hydrate_thread(client, thread)
+                self.connected(thread)
+            except Exception as error:
+                await self.degrade(thread, error, "child")
 
     async def items(self, client: ReadOnlyClient, thread: str, turn: str) -> list[Fact]:
         items: list[Fact] = []
@@ -347,7 +554,7 @@ class CodexNativeConsumer:
                 if not isinstance(item, dict):
                     raise NativeUnavailable("Malformed native item entry")
                 fact = await asyncio.to_thread(
-                    parse_event,
+                    project_event,
                     {
                         "method": "item/started"
                         if item.get("status") == "inProgress"
@@ -356,16 +563,17 @@ class CodexNativeConsumer:
                         "params": {"threadId": thread, "turnId": turn, "item": item},
                     },
                     workspace,
+                    self.profile,
                 )
                 if fact:
                     items.append(fact)
                 count += 1
             if count > 800:
-                raise NativeUnavailable("Native reconciliation item limit reached")
+                raise NativeBacklog("Native reconciliation item limit reached")
             cursor = page.get("nextCursor")
             if cursor is None:
                 return items
-        raise NativeUnavailable("Native reconciliation item limit reached")
+        raise NativeBacklog("Native reconciliation item limit reached")
 
     async def reconcile(
         self,
@@ -403,7 +611,7 @@ class CodexNativeConsumer:
             if reached or cursor is None:
                 break
         else:
-            raise NativeUnavailable("Native reconciliation turn limit reached")
+            raise NativeBacklog("Native reconciliation turn limit reached")
         children: dict[str, Fact] = {}
         for turn in reversed(turns):
             for fact in await self.items(client, root, turn["id"]):
@@ -413,18 +621,23 @@ class CodexNativeConsumer:
             # Do not manufacture a past completed child from an initial subscription snapshot.
             if fact.phase == "completed" and fact.child not in self.bindings.by_thread:
                 continue
-            await self.consume(client, fact)
+            await self.safe_consume(client, fact)
         await self.restore_children(client, root)
         await self.hydrate_thread(client, root)
         # Requests replayed by subscription are processed after reconstruction. Finished request
         # tombstones prevent an already-resolved request resurrecting a wait.
         while not queue.empty():
-            await self.consume(client, queue.get_nowait())
+            await self.safe_consume(client, queue.get_nowait())
 
     async def reconnect(self, office_agent_id: str) -> None:
         async with self.lock:
             binding = self.bindings.by_agent[office_agent_id]
             root = binding.root_thread_id
+            if binding.thread_id != root and self.tasks.get(root) and not self.tasks[root].done():
+                await self.degrade(
+                    binding.thread_id, NativeUnavailable("Requested child retry"), "child"
+                )
+                return
             if task := self.tasks.get(root):
                 task.cancel()
                 await asyncio.gather(task, return_exceptions=True)

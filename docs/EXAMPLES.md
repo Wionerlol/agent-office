@@ -201,3 +201,13 @@ frontend/dist/*
 .venv/*
 runtime/events.jsonl
 ```
+
+## v1.1 explicit launch and health
+
+GOOD: `office-run codex --id lead --native-child-definition tester resume UUID` registers then binds using the same explicit UUID and Office generation, without curl. `devrouter --office -- resume UUID` performs the same deterministic handshake through its installed wrapper. `agent-office native bind lead UUID` is the explicit operator alternative.
+
+GOOD: a malformed Tester snapshot shows degraded/fallback active while Lead and Reviewer remain connected; retry reconstructs only Tester. A transport disconnect releases the owned root connection, while another root keeps native activity. Integration degraded is not AgentState.ERROR.
+
+BAD: newest thread, only visible thread, same CWD or OS proximity selects a native identity. A fresh TUI without explicit identity remains unbound. Generated nickname/null role still never replace Tester responsibilities.
+
+GOOD: `agent-office native validate --thread UUID` reports structural check names with no questions/output/patches. Unknown versions report review_required instead of silently enabling production parsing.
