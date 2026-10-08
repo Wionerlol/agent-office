@@ -12,7 +12,7 @@
 | Fresh-session correlation | COMPLETE: current-runtime limitation |
 | 4A Role-Aware Spatial Team Behavior | COMPLETE |
 | 4B Team Interaction & Coordination Cues | COMPLETE |
-| 4C | NOT YET IMPLEMENTED |
+| 4C Daily-Use Readability & Interaction | COMPLETE |
 
 ## Native Runtime v1 contract
 
@@ -350,3 +350,18 @@ Central policy: delegation 3s, handoff 3s, blocked emphasis 4s; at most 48 cues 
 Visual vocabulary: `→` travels parent → child and points along its trajectory; `✓` returns child → parent; `↔` denotes active child waiting; `!` persists for ERROR, with a brief ring on entry. A compact text legend and content-free accessible scene description explain these symbols. WAITING/user_input retains NEEDS YOU/`?`; transients touching a user-attention agent are suppressed and an explicit coordination link targeting one is quieter. No private question/error text is shown.
 
 Demo simulation uses the same normalized start/update/stop path for a Test Partner cycle: spawn → Lead wait → child DONE → Lead resumes/child stops → Reviewer error/recovery. The user-input waiter remains visible. Pause/resume preserves the next script step and cancels scheduled changes cleanly. No new backend events or domain fields are introduced.
+
+
+## Phase 4C focus/readability contract
+
+Decisions 39–44 define a third frontend interpretation seam beside spatial behavior and interaction cues. `office/focus.ts` consumes only visible normalized Agents, selection/hover IDs and active content-free cues. It projects selected/related/dimmed, relation kinds and priority. Direct parent/children, current WAITING/child_agent target/reverse target and active selected cue endpoints are the only context; no inferred peers or transitive graph. A missing/filtered selection disables focus presentation.
+
+Selected actors get a floor ring/warm full-name plate; related actors a secondary ring. Unrelated actors remain visible at 0.62 opacity, except user input, ERROR and hover. Priority is user attention (6), selected (5), ERROR (4), hover (3), explicit visible wait endpoints (2), ordinary (1). Independent label plates retain map-space size; `office/readability.ts` sorts priority/ID, clamps to map bounds, tries bounded vertical collision offsets for priority >=2, hides colliding ordinary labels and retains priority >=3 even if extreme crowding exhausts space. Selected/hovered identity shows normalized name + role/status, with safe wrapping. No current command/prompt/question/reasoning/error/native content is added to these summaries.
+
+Physical StableZoneSlots, destinations, routing, collisions and y-sorted actor bodies remain unchanged by selection/hover. Labels can be displaced for readability only. Pixi objects are retained; per-Agent display keys skip unchanged plate/ring updates. Detached labels and pointer-bearing actors are destroyed on removal/unmount. InteractionLayer combines focus solely for connector opacity/width; original cues and TTL remain unchanged. NEEDS YOU is never dimmed and existing user-attention packet suppression wins.
+
+Team navigator native buttons share selectedAgentId with scene and panel, exposing semantic name/status, aria-pressed, a short selection announcement and visible focus. Tab/Enter/Space use browser button semantics; one cleaned-up window Escape listener clears selection. Panel close/Escape return focus to the previously selected Team button where available; empty map tap clears through the Pixi stage. AgentPanel offers direct visible parent/children/wait-target buttons that focus the target Team control; unresolved targets say Not in this view. Project filtering never navigates/mutates hidden Agents. The map accessible name is a bounded team/attention/ERROR summary and selected direct context; at most three reverse wait names are included.
+
+One `useReducedMotion` subscription is owned by App. A live system preference disables body bobbing, celebration rotation, ERROR opacity cycling and attention pulses; static symbols remain. Existing fixed-step walking uses 12 rather than 4.4 units per step. Interaction packets become static directional midpoint symbols until unchanged expiry, following current endpoints. No domain/destination/terminal lifetime changes.
+
+Responsive desktop shell: >=1200px uses office plus 300px details; narrower widths stack details after map/legend. Team/header wrap, fixed 1100×680 coordinates scale to available width. No pan/zoom, focus trap or mobile-first redesign. Simulation retains Phase 4B normalized lifecycle behavior and uses the same focus/navigation/motion path; ERROR is inspectable during the existing Reviewer failure step. No simulation-only focus implementation exists.

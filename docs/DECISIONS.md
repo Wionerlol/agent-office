@@ -559,3 +559,93 @@ Timed real browser review found that travelling text was hidden by desks and mul
 
 **Rejected Alternatives**
 - Add drawing/state-machine logic to the movement loop; rebuild Pixi on updates; heavy animation dependencies; raw question/error text or color-only failure cues.
+
+
+---
+
+## Decision 39: Keep focus and readability as frontend presentation projections
+
+**Decision**
+`office/focus.ts` projects selected/related/dimmed and label priority from the currently rendered normalized Agent subset and active InteractionCue endpoints. Parent, direct child, current explicit child wait and reverse wait supply direct context; no transitive sibling expansion or repository/task/role inference. Selection/hover never feeds SpatialBehavior, StableZoneSlots, routing, backend truth or cue generation. Unrelated actors use 0.62 opacity, with attention, ERROR and hover exempt. A floor ring and warm name plate mark selection; direct context uses a smaller ring. No solo mode.
+
+**Reason**
+Inspection must clarify existing facts without changing team behavior or hiding important work. Filtered-out selections produce whole-office presentation, not cross-project ghost context.
+
+**Rejected Alternatives**
+- Reuse spatial planning or AgentState for focus.
+- Infer teammates, recursively expand an org graph, or hide unrelated agents.
+- Recreate Pixi/scenery/routes on selection or hover.
+
+---
+
+## Decision 40: Separate semantic label priority from physical crowd placement
+
+**Decision**
+Central priority is user-input attention > selected > ERROR > hover > explicit visible wait endpoints > ordinary. Important plates remain eligible while walking/in dense slots; wait endpoints also get label eligibility. Independent stage-space plates preserve font size and use deterministic ID-tiebroken overlap avoidance. Ordinary overlapping labels yield; important labels try bounded vertical offsets and remain visible even when no collision-free position exists. Selected/hovered plates show full normalized semantic name and role/status only, wrapping unusually long identity strings. No task, question, command, error or native content is added.
+
+**Reason**
+Dense physical seats may shrink characters, but information priority must remain readable. Label placement never moves characters. Extreme teams can still exceed available label space; the DOM navigator remains a complete accessible identity surface.
+
+**Rejected Alternatives**
+- Enlarge/reseat selected characters or shrink every label indefinitely.
+- Hide selected/attention/ERROR labels because StableZoneSlots hides ordinary labels.
+- Add zoom/pan, large hovering content cards or private text.
+
+---
+
+## Decision 41: Emphasize existing relationships without extending their truth or lifetime
+
+**Decision**
+InteractionLayer accepts presentation separately from its normalized Agent/cue inputs. Connectors involving the selected endpoint become clearer; other connectors become quieter. User-attention suppression remains strongest. Focus changes neither cue IDs nor 3s/3s/4s TTLs, and normal parentage still draws no permanent line. AgentPanel offers visible direct parent, children and wait-target buttons; missing/filtered targets say Not in this view, without guessing names or exposing IDs as navigation labels.
+
+**Reason**
+The human can follow a current wait or recent handoff without turning the office into a graph. Selection expresses interest, not a new collaboration event.
+
+**Rejected Alternatives**
+- Reissue delegation/handoff on selection or restart expiry.
+- Add permanent parent-child edges or recursive panel trees.
+- Navigate to hidden projects automatically or fabricate missing identities.
+
+---
+
+## Decision 42: Use DOM Agent navigation as the keyboard accessibility surface
+
+**Decision**
+A visible Team navigator uses native buttons in visible-Agent insertion order, Tab/Enter/Space activation, aria-pressed, a selected-state live announcement and focus-visible outlines. One owner registers Escape and removes it on unmount. Panel close/Escape restore focus to the selected navigator button when available; a Pixi background tap also clears selection. The map has a bounded count/attention/error summary plus selected direct context (at most three reverse waits); the navigator exposes every visible Agent without an enormous canvas aria-label.
+
+**Reason**
+Native DOM controls provide predictable keyboard and screen-reader behavior without constructing an accessibility tree for arbitrary Pixi graphics. The same selection works for pointer, relationships and keyboard.
+
+**Rejected Alternatives**
+- Mouse/hover-only inspection, a full Pixi DOM hierarchy or a heavy accessibility dependency.
+- Complex spatial arrow navigation or concatenating every Agent/transition into one map label.
+
+---
+
+## Decision 43: Centralize system reduced-motion presentation without changing semantics
+
+**Decision**
+One App-owned `useReducedMotion` subscription observes prefers-reduced-motion and removes its change listener on unmount. The setting is passed to scene/interaction rendering. Reduced mode keeps bodies/attention static, removes work bobbing, celebration shaking and ERROR opacity cycling, accelerates existing walking from 4.4 to 12 units per fixed step, and displays directional delegation/handoff symbols at the arc midpoint until their original expiry. Static ?, !, ✓ and coordination meaning remain. No backend timers, states, destinations or cue TTLs change.
+
+**Reason**
+Motion is decorative; attention, completion and direction must remain understandable without it. Shorter travel still shows where an Agent goes using the existing route/collision constraints.
+
+**Rejected Alternatives**
+- Disable all cues or hide activity under reduced motion.
+- Scatter matchMedia listeners through Pixi objects or add a preferences system.
+- Change terminal grace/TTL or teleport without visible location context.
+
+---
+
+## Decision 44: Keep responsive desktop layout around the fixed office coordinate system
+
+**Decision**
+The internal map remains 1100×680. At 1200px and wider, map and 300px details are side by side; below that, details stack after the full scalable map/legend. Header controls and Team buttons wrap. All direct relation controls remain in normal document tab order. No drawer/focus trap, mobile-first redesign, map pan/zoom or new rooms. Presentation primitives are retained per Agent/cue; unchanged display keys skip plate/ring redraws, and removal/teardown destroys detached labels and pointer-bearing actors.
+
+**Reason**
+Laptop/secondary windows need a complete office and reachable details rather than an excessively narrow map. A stacked region is predictable and needs no additional modal state/resources.
+
+**Rejected Alternatives**
+- Rebuild responsive scenery or maintain separate layout engines.
+- Keep a fixed side panel at every width or introduce a modal drawer/focus trap.
+- Recreate all graphics/badges on every hover/selection change.

@@ -1,4 +1,4 @@
-import { Application, Container, Graphics, Text } from "pixi.js";
+import { Application, Container, Graphics, Rectangle, Text } from "pixi.js";
 import { useEffect, useRef, useState } from "react";
 
 import type { Agent, CodexUsage } from "../models/agent";
@@ -10,19 +10,32 @@ import { drawOfficeScenery, type OfficeScenery } from "./scenery";
 import { spatialBehaviorFor, type VisualState } from "./visual";
 
 import type { InteractionCue } from "../models/interaction";
-import { InteractionLayer, interactionDescription } from "./interactions";
+import { InteractionLayer } from "./interactions";
+
+import { focusFor, identitySummary, officeDescription, type AgentFocus } from "./focus";
+import { placeLabels } from "./readability";
+import { bodyPose } from "./motion";
 
 interface OfficeSceneProps {
   agents: Agent[];
   deskCount: number;
   usage?: CodexUsage | null;
   cues?: readonly InteractionCue[];
+  selectedId?: string | null;
+  reducedMotion?: boolean;
 }
 
 interface RenderedAgent {
   container: Container;
   body: Container;
   labels: Container;
+  namePlate: Graphics;
+  statusPlate: Graphics;
+  ring: Graphics;
+  focus?: AgentFocus;
+  labelWidth: number;
+  labelHeight: number;
+  presentationKey?: string;
   name: Text;
   status: Text;
   indicator: Container;
@@ -46,11 +59,13 @@ const agentColor = (id: string): number => {
 
 const shortName = (name: string): string => name.length > 15 ? `${name.slice(0, 13)}…` : name;
 
-function createRenderedAgent(agent: Agent, selectAgent: (id: string) => void): RenderedAgent {
+function createRenderedAgent(agent: Agent, selectAgent: (id: string) => void, hoverAgent: (id: string | null) => void): RenderedAgent {
   const container = new Container();
   container.eventMode = "static";
   container.cursor = "pointer";
-  container.on("pointertap", () => selectAgent(agent.id));
+  container.on("pointertap", (event) => { event.stopPropagation(); selectAgent(agent.id); });
+  container.on("pointerover", () => hoverAgent(agent.id));
+  container.on("pointerout", () => hoverAgent(null));
   const color = agentColor(agent.id);
   const shadow = new Graphics().ellipse(0, 19, 22, 8).fill({ color: 0x263236, alpha: 0.22 });
   const body = new Container();
@@ -102,12 +117,16 @@ function createRenderedAgent(agent: Agent, selectAgent: (id: string) => void): R
   const indicatorPlate = new Graphics();
   indicator.addChild(indicatorPlate, indicatorText);
   indicator.visible = false;
-  container.addChild(shadow, body, labels, indicator);
+  const ring = new Graphics();
+  container.addChild(shadow, ring, body, indicator);
+  labels.label = `agent-labels:${agent.id}`;
+  labels.eventMode = "none";
   container.position.set(POSITIONS.entrance.x, POSITIONS.entrance.y);
   return {
     container,
     body,
     labels,
+    namePlate, statusPlate, ring, labelWidth: 100, labelHeight: 36,
     name,
     status,
     indicator,
@@ -125,7 +144,7 @@ function createRenderedAgent(agent: Agent, selectAgent: (id: string) => void): R
   };
 }
 
-export function OfficeScene({ agents, deskCount, usage = null, cues = [] }: OfficeSceneProps) {
+export function OfficeScene({ agents, deskCount, usage = null, cues = [], selectedId = null, reducedMotion = false }: OfficeSceneProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const interactionsRef = useRef<InteractionLayer | null>(null);
   const appRef = useRef<Application | null>(null);
@@ -134,6 +153,9 @@ export function OfficeScene({ agents, deskCount, usage = null, cues = [] }: Offi
   const assignmentsRef = useRef(new Map<string, string>());
   const slotsRef = useRef(new StableZoneSlots());
   const [ready, setReady] = useState(false);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const presentationRef = useRef({ reducedMotion });
+  presentationRef.current = { reducedMotion };
   const selectAgent = useAgentStore((state) => state.selectAgent);
   const atmosphere = atmosphereForUsage(usage?.remaining_percent ?? null);
   const atmosphereRef = useRef(atmosphere);
@@ -154,7 +176,12 @@ export function OfficeScene({ agents, deskCount, usage = null, cues = [] }: Offi
       app.canvas.style.height = "100%";
       host.appendChild(app.canvas);
       app.stage.sortableChildren = true;
+      app.stage.eventMode = "static";
+      app.stage.hitArea = new Rectangle(0, 0, OFFICE_WIDTH, OFFICE_HEIGHT);
+      app.stage.on("pointertap", () => useAgentStore.getState().selectAgent(null));
       sceneryRef.current = drawOfficeScenery(app, atmosphereRef.current);
+      // Background/furniture never intercept actor hover/taps when the stage handles empty taps.
+      for (const child of app.stage.children) child.eventMode = "none";
       appRef.current = app;
       interactionsRef.current = new InteractionLayer(app.stage);
       let movementFrames = 0;
@@ -173,18 +200,17 @@ export function OfficeScene({ agents, deskCount, usage = null, cues = [] }: Offi
               rendered.distanceBefore = distance;
               if (distance < 4) rendered.path.shift();
               else {
-                const movement = Math.min(distance, 4.4);
+                const movement = Math.min(distance, presentationRef.current.reducedMotion ? 12 : 4.4);
                 rendered.container.x += (dx / distance) * movement;
                 rendered.container.y += (dy / distance) * movement;
               }
             }
             const time = app.ticker.lastTime / 180 + rendered.phase;
-            const active = rendered.animation === "typing" || rendered.animation === "testing" || rendered.animation === "working_machine";
-            rendered.body.y = active ? Math.sin(time * 2) * 1.5 : 0;
-            rendered.body.rotation = rendered.animation === "celebration" ? Math.sin(time * 2) * 0.12 : 0;
-            rendered.body.alpha = rendered.animation === "error" ? 0.65 + Math.sin(time * 3) * 0.3 : 1;
-            rendered.indicator.alpha = rendered.animation === "user_attention" ? 0.85 + Math.sin(time / 3) * 0.15 : 1;
-            rendered.labels.visible = rendered.showLabel && (rendered.path.length === 0 || rendered.animation === "celebration");
+            const pose = bodyPose(rendered.animation, time, presentationRef.current.reducedMotion);
+            rendered.body.y = pose.y;
+            rendered.body.rotation = pose.rotation;
+            rendered.body.alpha = pose.alpha;
+            rendered.indicator.alpha = pose.attentionAlpha;
             rendered.container.zIndex = 100 + Math.round(rendered.container.y);
           }
           const separated = separateAgentPositions(
@@ -227,6 +253,16 @@ export function OfficeScene({ agents, deskCount, usage = null, cues = [] }: Offi
             }
           }
         }
+        const labelPositions = placeLabels([...renderedAgents].map(([id, r]) => ({
+          id, x: r.container.x, y: r.container.y + 27 * r.container.scale.x + r.labelHeight / 2,
+          width: r.labelWidth, height: r.labelHeight, priority: r.focus?.priority ?? 1,
+          eligible: Boolean(r.focus?.importantLabel || (r.showLabel && (!r.path.length || r.animation === "celebration"))),
+        })));
+        for (const [id, r] of renderedAgents) {
+          const point = labelPositions.get(id);
+          r.labels.visible = Boolean(point);
+          if (point) r.labels.position.set(point.x, point.y - (27 + r.labelHeight / 2));
+        }
         interactionsRef.current?.draw(new Map([...renderedAgents].map(([id, r]) => [id, {
           x: r.container.x, y: r.container.y, scale: r.container.scale.x,
         }])), Date.now());
@@ -237,6 +273,10 @@ export function OfficeScene({ agents, deskCount, usage = null, cues = [] }: Offi
       cancelled = true;
       interactionsRef.current?.destroy();
       interactionsRef.current = null;
+      for (const r of renderedAgents.values()) {
+        r.container.destroy({ children: true });
+        r.labels.destroy({ children: true });
+      }
       renderedAgents.clear();
       deskAssignments.clear();
       slots.clear();
@@ -258,6 +298,7 @@ export function OfficeScene({ agents, deskCount, usage = null, cues = [] }: Offi
       if (!currentIds.has(agentId)) {
         app.stage.removeChild(rendered.container);
         rendered.container.destroy({ children: true });
+        rendered.labels.destroy({ children: true });
         renderedRef.current.delete(agentId);
         assignmentsRef.current.delete(agentId);
       }
@@ -278,12 +319,10 @@ export function OfficeScene({ agents, deskCount, usage = null, cues = [] }: Offi
       let rendered = renderedRef.current.get(agent.id);
       const newlyCreated = !rendered;
       if (!rendered) {
-        rendered = createRenderedAgent(agent, selectAgent);
+        rendered = createRenderedAgent(agent, selectAgent, setHoveredId);
         renderedRef.current.set(agent.id, rendered);
-        app.stage.addChild(rendered.container);
+        app.stage.addChild(rendered.container, rendered.labels);
       }
-      rendered.name.text = shortName(agent.name);
-      rendered.status.text = agent.status.toUpperCase();
       rendered.animation = visual.animation;
       rendered.holdPosition = visual.holdPosition;
       const compactAttention = visual.attention === "user";
@@ -337,8 +376,44 @@ export function OfficeScene({ agents, deskCount, usage = null, cues = [] }: Offi
     interactionsRef.current?.setState(agents, cues);
   }, [agents, cues, ready]);
 
-  return <div className="office-scene" ref={hostRef} role="img" aria-label={`Live agent office map. ${agents.map((agent) => {
-    const plan = spatialBehaviorFor(agent, "assigned desk");
-    return `${agent.name}: ${agent.status}, ${plan.indicator ?? plan.destinationZone.replaceAll("_", " ")}`;
-  }).join(". ")}. ${interactionDescription(agents, cues, Date.now())}`} />;
+  // Presentation updates are deliberately separate from seat assignment and route updates.
+  useEffect(() => {
+    const focus = focusFor(agents, selectedId, hoveredId, cues, Date.now());
+    for (const agent of agents) {
+      const rendered = renderedRef.current.get(agent.id), projection = focus.get(agent.id);
+      if (!rendered || !projection) continue;
+      rendered.focus = projection;
+      const key = JSON.stringify([agent.name, agent.role, agent.status, projection.selected, projection.related,
+        projection.dimmed, projection.priority, projection.expandedLabel, rendered.container.scale.x]);
+      if (rendered.presentationKey === key) continue;
+      rendered.presentationKey = key;
+      rendered.container.alpha = projection.dimmed ? 0.62 : 1;
+      rendered.labels.alpha = projection.dimmed ? 0.7 : 1;
+      rendered.labels.zIndex = 1000 + projection.priority;
+      rendered.ring.clear();
+      if (projection.selected || projection.related) rendered.ring.ellipse(0, 18, projection.selected ? 29 : 26, 10)
+        .stroke({ color: projection.selected ? 0x244c60 : 0x6b837e, width: projection.selected ? 3 : 1.5, alpha: 0.9 });
+      rendered.name.text = projection.expandedLabel ? agent.name : shortName(agent.name);
+      rendered.status.text = projection.expandedLabel ? identitySummary(agent) : agent.status.toUpperCase();
+      // Fixed screen-space plates remain readable even when dense physical slots shrink actors.
+      for (const text of [rendered.name, rendered.status]) {
+        text.style.wordWrap = true;
+        text.style.wordWrapWidth = 344;
+        text.style.breakWords = true;
+      }
+      rendered.labelWidth = Math.min(360, Math.max(100, rendered.name.width + 16, rendered.status.width + 16));
+      const nameHeight = Math.max(21, rendered.name.height + 6), statusHeight = Math.max(14, rendered.status.height + 4);
+      rendered.labelHeight = nameHeight + statusHeight;
+      rendered.name.position.set(0, 27 + nameHeight / 2);
+      rendered.status.position.set(0, 27 + nameHeight + statusHeight / 2);
+      rendered.namePlate.clear().roundRect(-rendered.labelWidth / 2, 27, rendered.labelWidth, nameHeight, 7)
+        .fill({ color: projection.selected ? 0xffefc8 : 0xf8f2e6, alpha: 0.97 })
+        .stroke({ color: 0x314649, width: projection.selected ? 2 : 1, alpha: 0.6 });
+      rendered.statusPlate.clear().roundRect(-rendered.labelWidth / 2, 27 + nameHeight, rendered.labelWidth, statusHeight, 6).fill(0x304b4d);
+      rendered.indicator.scale.set(projection.importantLabel ? 1 / rendered.container.scale.x : 1);
+    }
+    interactionsRef.current?.setPresentation(selectedId, focus, reducedMotion);
+  }, [agents, cues, selectedId, hoveredId, reducedMotion, ready]);
+
+  return <div className="office-scene" ref={hostRef} role="img" aria-label={officeDescription(agents, selectedId)} />;
 }

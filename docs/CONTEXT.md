@@ -131,3 +131,14 @@ Phase 4B adds only frontend interaction interpretation over Phase 4A destination
 Controlled Chromium WebSocket fixtures exercise new child starts, duplicate starts/DONE, moving endpoints, wait clear, filtered targets, snapshots, cue expiry and offline cleanup. Screenshots at start/midpoint/expired states reveal visual timing; first visual review exposed hidden travelling text and overlapping blocked labels, so the final vocabulary uses compact symbols and a short legend. This is frontend verification, not new provider/runtime capability evidence.
 
 Remaining UX limits: connectors can cross furniture/one another; very dense teams still inherit Phase 4A scale/label compromises; transient cues are intentionally short and not replayed. Filtered relations do not invent local targets. Phase 4C should refine readability and selection/accessibility from daily use, without adding inferred teams or reopening native infrastructure.
+
+
+## Phase 4C — Daily-Use Readability & Interaction
+
+Phase 4C is implemented entirely in the frontend. Focus/readability is separate from spatial planning and transient cues. Team DOM buttons make all visible Agents inspectable; the details panel navigates direct explicit relationships. Presentation protects user attention/ERROR and dense selected labels, and system reduced motion retains static meaning. Existing simulation transitions are unchanged and exercise the same controls, including Reviewer ERROR during its failure step.
+
+Controlled Chromium normalized WebSocket fixtures cover selection, full-name hover, direct relations, keyboard activation/clearing/focus return, empty map clearing, crowded Test Lab, four desktop widths and live reduced-motion preference. Screenshot evidence is frontend behavior, not new native capability evidence. Historical Decisions 1–38 remain verbatim; no backend/native/config/dependency changes are part of this phase.
+
+Remaining limits: very large teams can exhaust space even after bounded priority-label avoidance; ordinary labels may hide and important labels may still overlap under extreme density. Connectors still cross furniture/other links, and the stacked narrow panel requires document scrolling. System preference is the only motion setting. No automated screen-reader product certification is claimed; native buttons, live selection, content-free description and real keyboard checks provide the current accessibility evidence. Fresh-session limitation and independent same-repository DevRouter Office-ID reuse remain unchanged.
+
+Next milestone should evaluate daily use and refine prioritized UX gaps; it must not reopen runtime correlation or infer new team relationships.

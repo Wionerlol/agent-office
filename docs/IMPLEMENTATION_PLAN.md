@@ -10,7 +10,8 @@
 6. Fresh-session deterministic correlation investigation — COMPLETE, investigation-only: current-runtime limitation; no Phase 3B v1.2 feature. See [evidence and decision matrix](runtime-probe/FRESH_SESSION_CORRELATION.md), Decision 28 and the explicit operator workflow in NATIVE_RUNTIME.md.
 7. Phase 4A Role-Aware Spatial Team Behavior — COMPLETE: planner, role homes, attention/coordination, stable seats, DONE celebration, simulation and visual verification.
 8. Phase 4B Team Interaction & Coordination Cues — COMPLETE: normalized lifecycle cues, explicit coordination, bounded TTL/dedup, extracted rendering and scripted simulation.
-9. Phase 4C — NOT YET IMPLEMENTED. Refine clarity/selection/accessibility from daily use. Native work requires new upstream evidence or a separately scoped correctness issue.
+9. Phase 4C Daily-Use Readability & Interaction — COMPLETE: pure focus/readability, direct relation navigation, DOM keyboard controls, system reduced motion, responsive desktop shell and controlled browser evidence.
+10. Phase 4D / next product milestone — NOT YET IMPLEMENTED. Evaluate daily-use feedback before selecting further UX work. Native work still requires new upstream evidence or a separately scoped correctness issue.
 
 ## Completed Phase 2: Semantic Agent Model
 
@@ -85,3 +86,15 @@ When finished, report:
 6. Drive scripted simulation through the same lifecycle path, with pause/cleanup.
 7. Test TTL, dedup, bounded memory, endpoint tracking, cleanup and Phase 4A movement regressions.
 8. Inspect timed controlled Chromium screenshots, run full regressions and require Backend/Frontend CI on the final PR commit.
+
+
+## Completed Phase 4C plan
+
+1. Read current product decisions and inspect spatial/interaction/store/tests.
+2. Add pure direct-context focus and priority label placement without moving seats/routes.
+3. Apply incremental actor/connector presentation, full-name hover and priority-preserving crowd labels.
+4. Add direct panel relation buttons and accessible Team keyboard navigation/clear focus.
+5. Centralize system reduced motion; preserve static interaction/attention/error meaning.
+6. Stack desktop details below 1200px while retaining complete scene coordinates.
+7. Verify focused tests, all prior regressions and controlled Chromium selection/keyboard/motion/viewport screenshots.
+8. Append Decisions 39–44, synchronize docs and require Backend/Frontend CI on the final PR commit. Do not begin Phase 4D or merge without explicit instruction.
