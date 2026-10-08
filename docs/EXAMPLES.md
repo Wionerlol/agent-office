@@ -234,3 +234,18 @@ GOOD: several Testers keep distinct seats when a Researcher updates. Unknown `cu
 BAD: infer role from pytest; send a testing Reviewer home instead of Test Lab; infer waiting from parentage; display questions/UUIDs; reshuffle everyone on unrelated updates.
 
 Pause the normalized demo to inspect roles; Resume exercises the same live scene path. Reviewed screenshots: [role homes](images/spatial-role-homes.png), [attention/team](images/spatial-attention-team.png), [completed child](images/spatial-child-done.png).
+
+
+## Phase 4B team interaction examples
+
+GOOD: incremental Tester start with visible Lead parent emits one 3s Lead → Tester arrow. Duplicate start does not replay it. A reconnect snapshot containing that same pair emits no arrow.
+
+GOOD: Lead WAITING/child_agent on visible Tester has a quiet moving-endpoint `↔` link. Lead returning to THINKING removes it. If Tester is filtered out, Lead retains its local Child wait marker without a fabricated endpoint.
+
+GOOD: Tester TESTING → DONE emits one returning `✓`; DONE → DONE emits none. The parent neither moves nor changes status because of the handoff. Ordinary parentage without an active wait produces no permanent line.
+
+GOOD: Reviewer enters ERROR, receives a brief ring and a persistent `!` while ERROR lasts. The Lead remains healthy unless its own normalized state says otherwise. NEEDS YOU remains stronger than team packets.
+
+BAD: infer delegation from similar tasks, animate all children on snapshots, retain organization lines, expose questions/errors in bubbles, or reroute parents for transient cues.
+
+See controlled normalized browser evidence: [delegation](images/interaction-delegation-midpoint.png), [moving coordination](images/interaction-coordination-moving.png), [coordination and user attention](images/interaction-coordination.png), [handoff](images/interaction-handoff.png), [simultaneous signals](images/interaction-multiple-blocked.png), [expired emphasis](images/interaction-blocked-expired.png). Start/midpoint/expired delegation states are also retained for timing inspection.

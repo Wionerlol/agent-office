@@ -489,3 +489,73 @@ Shared functional zones need distinct targets without unrelated reshuffling. Con
 
 **Rejected Alternatives**
 - Rebuild Pixi or randomize seats on updates; retain departed IDs forever; add a physics/layout engine; guarantee unlimited readable density.
+
+
+---
+
+## Decision 34: Persistent truth and transient interaction cues are separate
+
+**Decision**
+Keep persistent coordination/error/attention projections separate from content-free frontend InteractionCue records. SpatialBehavior continues to own destinations; cues do not change movement or backend truth.
+
+**Reason**
+Current waits last while true; delegation/completion represent short lifecycle edges. Mixing them creates permanent or stale relationship visuals.
+
+**Rejected Alternatives**
+- Put interaction fields/events in backend Agent models; overload recentEvents; turn parentage into permanent visuals.
+
+
+---
+
+## Decision 35: Only normalized incremental lifecycle edges generate transient cues
+
+**Decision**
+Generate delegation for a new child start with known parent, handoff on non-DONE → DONE, and local blocked emphasis on non-ERROR → ERROR. Snapshots clear transient state and seed identities, without historical animations. Live and simulation share the same normalized message handler.
+
+**Reason**
+Reconnect is current truth, not an event replay UI. Status edges and lifecycle identity make repeated normalized updates idempotent.
+
+**Rejected Alternatives**
+- Animate snapshot children/completions; infer teams/delegation from task strings, processes or raw provider events; propagate child ERROR to parent.
+
+
+---
+
+## Decision 36: Active child waiting alone permits a persistent coordination link
+
+**Decision**
+Draw a quiet connector only for explicit WAITING/child_agent with a currently rendered non-self target. Resolve live endpoints each frame; filtered/missing targets keep only local spatial cues. Preserve NEEDS YOU priority.
+
+**Reason**
+The office should communicate current collaboration without becoming an organization graph or changing normalized relationships based on filtering.
+
+**Rejected Alternatives**
+- Permanent parent-child lines; fabricated endpoints; extra routing or parent state changes for delegation/handoff.
+
+
+---
+
+## Decision 37: Bounded cues and centralized maintenance define replay and expiry limits
+
+**Decision**
+Cap cues at 48 and remembered start generations at 128. Use fixed 3s delegation/handoff and 4s blocked TTLs, current generation/status-edge checks and one App-owned 250ms sweep. Keep existing 5s offline grace in this maintenance owner; duplicate stops never extend it and a new registration cancels stale cleanup. Pause stops simulation changes, not TTL expiry.
+
+**Reason**
+Short cues need deterministic cleanup, bounded resources and reconnect safety without a history system or timer per visual primitive.
+
+**Rejected Alternatives**
+- Unbounded event/dedup history; random durations; one timer per cue; leak stop timers on unmount; indefinitely replay retired starts beyond the bounded window.
+
+
+---
+
+## Decision 38: Interaction rendering is extracted and uses compact readable symbols
+
+**Decision**
+Keep a dedicated content-free InteractionLayer with reused Graphics/keyed badges and live endpoint projection. Quiet lines stay below characters; short directional pulses cross foreground furniture. Use →/↔/✓/! with a small text legend and accessible relationships. ERROR retains ! after entry emphasis expires; user attention suppresses competing packets.
+
+**Reason**
+Timed real browser review found that travelling text was hidden by desks and multiple blocked labels overlapped. Compact symbols improve legibility without a redesign or private text.
+
+**Rejected Alternatives**
+- Add drawing/state-machine logic to the movement loop; rebuild Pixi on updates; heavy animation dependencies; raw question/error text or color-only failure cues.

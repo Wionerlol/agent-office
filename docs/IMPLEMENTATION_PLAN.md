@@ -9,7 +9,8 @@
 5. Phase 3B v1.1 — COMPLETE: explicit-resume/operator CLI binding, generation-aware retries, per-thread recovery, reviewed profiles and local health diagnostics.
 6. Fresh-session deterministic correlation investigation — COMPLETE, investigation-only: current-runtime limitation; no Phase 3B v1.2 feature. See [evidence and decision matrix](runtime-probe/FRESH_SESSION_CORRELATION.md), Decision 28 and the explicit operator workflow in NATIVE_RUNTIME.md.
 7. Phase 4A Role-Aware Spatial Team Behavior — COMPLETE: planner, role homes, attention/coordination, stable seats, DONE celebration, simulation and visual verification.
-8. Phase 4B — NOT YET IMPLEMENTED. Refine readability/interaction separately. Native work requires new upstream evidence or a separately scoped correctness issue.
+8. Phase 4B Team Interaction & Coordination Cues — COMPLETE: normalized lifecycle cues, explicit coordination, bounded TTL/dedup, extracted rendering and scripted simulation.
+9. Phase 4C — NOT YET IMPLEMENTED. Refine clarity/selection/accessibility from daily use. Native work requires new upstream evidence or a separately scoped correctness issue.
 
 ## Completed Phase 2: Semantic Agent Model
 
@@ -72,3 +73,15 @@ When finished, report:
 6. Update normalized simulation and pause/resume controls.
 7. Verify deterministic frontend behavior and inspect real browser fixture screenshots.
 8. Run full regressions and required Backend/Frontend CI; prepare a separate PR.
+
+
+## Completed Phase 4B plan
+
+1. Read project state and trace normalized WebSocket/store/scene interaction.
+2. Separate bounded frontend cue state from spatial planning and diagnostic event history.
+3. Generate transient cues from incremental lifecycle edges; snapshots restore persistent truth only.
+4. Extract interaction projection/rendering with live endpoints and filtered-visibility guards.
+5. Keep user attention strongest; add non-color-only symbols and a compact legend.
+6. Drive scripted simulation through the same lifecycle path, with pause/cleanup.
+7. Test TTL, dedup, bounded memory, endpoint tracking, cleanup and Phase 4A movement regressions.
+8. Inspect timed controlled Chromium screenshots, run full regressions and require Backend/Frontend CI on the final PR commit.

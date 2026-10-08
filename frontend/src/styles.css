@@ -45,3 +45,5 @@ dt { color: #6a7471; } dd { margin: 0; font-family: monospace; }
 ul { padding-left: 1.1rem; margin: .4rem 0; font: .78rem/1.55 monospace; }
 .muted { color: #717b78; font-size: .82rem; }
 @media (max-width: 960px) { main { padding: 14px; } .workspace { grid-template-columns: 1fr; } .agent-panel { position: static; } .topbar { align-items: start; flex-direction: column; } }
+
+.interaction-legend { margin: 8px 0 0; font-size: 12px; color: #b5c8c7; text-align: center; }

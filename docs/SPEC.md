@@ -11,7 +11,8 @@
 | 3B v1.1 Native Hardening | COMPLETE |
 | Fresh-session correlation | COMPLETE: current-runtime limitation |
 | 4A Role-Aware Spatial Team Behavior | COMPLETE |
-| 4B | NOT YET IMPLEMENTED |
+| 4B Team Interaction & Coordination Cues | COMPLETE |
+| 4C | NOT YET IMPLEMENTED |
 
 ## Native Runtime v1 contract
 
@@ -326,3 +327,26 @@ Review and User Attention use existing unused left-side space without new walls.
 Movement retains walkable grid/A*, separation and y ordering. Fixed movement steps tolerate variable frame cadence; only stalled routes and displaced seated actors are rerouted. Destination changes occur only when plan/seat changes. DONE immediately stops walking, using unchanged backend terminal timing.
 
 Simulation uses normalized roles, parent IDs and waiting context through the same scene path. Pause/Resume freezes demo transitions for inspection. Semantic names remain authoritative; no native UUID, prompt, reasoning or tool output is exposed.
+
+
+## Phase 4B interaction contract
+
+`models/interaction.ts` defines frontend-local InteractionCue (`id`, `kind`, `sourceAgentId`, optional `targetAgentId`, `createdAt`, `expiresAt`). It is separate from AgentState, backend AgentEvent and SpatialBehavior. Existing ServerMessage shapes remain unchanged. Zustand holds `interactionCues` independently of `recentEvents`.
+
+The shared `applyServerMessage` → store `receiveMessage` path atomically applies normalized truth and emits cues:
+
+- A genuinely new `agent.started` lifecycle with a known non-offline, non-self parent creates parent → child delegation. Current Agent generation plus bounded `(id, started_at)` start keys prevent duplicate registration animation.
+- Incremental previous status != DONE → DONE with a known parent creates child → parent handoff. DONE → DONE creates nothing.
+- Incremental previous status != ERROR → ERROR creates local blocked emphasis. ERROR → ERROR never refreshes it; parent status is untouched.
+- Snapshot replaces current truth and clears transients, seeding current start identities without replaying historical delegation/completion. It reconstructs persistent waits and ERROR indicators only.
+- Stops/removal immediately discard dependent cues. Re-registering an ID with a new generation discards old cues and cancels old offline cleanup. No payload/task/output/native text is copied into a cue.
+
+Persistent coordination requires WAITING/child_agent plus a non-self target present in the rendered, non-offline subset. Parentage alone never creates an edge. Clearing waiting immediately removes the connector on the next frame. Missing/filtered targets leave the Phase 4A local coordination marker intact without ghost lines or backend relationship changes.
+
+Central policy: delegation 3s, handoff 3s, blocked emphasis 4s; at most 48 cues and 128 remembered start keys. Current registered identities still suppress duplicate starts after key eviction; retired lifecycle dedup is bounded, not an infinite history guarantee. One App-owned 250ms maintenance interval removes expired cues and handles existing 5s offline grace. Duplicate stops do not extend that grace. Pause stops scripted simulation changes, while ephemeral TTL cleanup continues. Unmount clears the interval; renderer also refuses expired cues, including background-tab delays.
+
+`office/interactions.ts` owns pure frame projection and a dedicated Pixi InteractionLayer. Each frame resolves live character positions/scales; it never alters destinations, routing, collisions, status or identity. One reused Graphics draws connector segments/rings, while keyed glyph primitives are retained until expiry/visibility loss. Connectors and quiet coordination glyphs remain below characters/labels; compact travelling pulses cross foreground furniture, and local error markers remain readable above it. Scene teardown destroys both layer containers and their children. Persistent objects scale only with visible waits/errors; transient objects are bounded by the cue cap.
+
+Visual vocabulary: `→` travels parent → child and points along its trajectory; `✓` returns child → parent; `↔` denotes active child waiting; `!` persists for ERROR, with a brief ring on entry. A compact text legend and content-free accessible scene description explain these symbols. WAITING/user_input retains NEEDS YOU/`?`; transients touching a user-attention agent are suppressed and an explicit coordination link targeting one is quieter. No private question/error text is shown.
+
+Demo simulation uses the same normalized start/update/stop path for a Test Partner cycle: spawn → Lead wait → child DONE → Lead resumes/child stops → Reviewer error/recovery. The user-input waiter remains visible. Pause/resume preserves the next script step and cancels scheduled changes cleanly. No new backend events or domain fields are introduced.

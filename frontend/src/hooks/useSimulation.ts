@@ -1,35 +1,43 @@
-import { useEffect } from "react";
-
-import { AGENT_STATES } from "../models/agent";
+import { useEffect, useRef } from "react";
+import { applyServerMessage } from "../api/websocket";
+import { demoAgents } from "../data/demo";
 import { useAgentStore } from "../store/agents";
 
-const SIMULATION_STATES = AGENT_STATES.filter((state) => state !== "offline" && state !== "starting");
+const STEP_DELAYS = [3000, 4000, 7000, 3000, 6000, 4000] as const;
 
+/** Scripted normalized messages exercise the same lifecycle path as the server. */
 export function useSimulation(enabled: boolean) {
   const paused = useAgentStore((state) => state.simulationPaused);
-
+  const step = useRef(0);
   useEffect(() => {
     if (!enabled || paused) return;
     let timeout: number;
     const tick = () => {
       timeout = window.setTimeout(() => {
-        const { agents, updateAgent, addEvent } = useAgentStore.getState();
-        const current = Object.values(agents);
-        if (current.length) {
-          const agent = current[Math.floor(Math.random() * current.length)];
-          const status = SIMULATION_STATES[Math.floor(Math.random() * SIMULATION_STATES.length)];
-          const waiting = status === "waiting";
-          const child = waiting && agent.id === "lead" && agents.tester ? "tester" : null;
-          const timestamp = new Date().toISOString();
-          const context = {
-            waiting_reason: waiting ? (child ? "child_agent" : "user_input") : null,
-            waiting_on_agent_id: child,
-          };
-          updateAgent(agent.id, { status, last_active_at: timestamp, ...context });
-          addEvent({ type: "agent.state_changed", agent_id: agent.id, timestamp, payload: { to: status, ...context } });
+        const timestamp = new Date().toISOString();
+        switch (step.current) {
+          case 0:
+            applyServerMessage({ type: "agent.started", agent: { ...demoAgents[1], id: "demo-tester", name: "Test Partner", status: "testing", started_at: timestamp, last_active_at: timestamp } });
+            break;
+          case 1:
+            applyServerMessage({ type: "agent.updated", agent_id: "lead", changes: { status: "waiting", waiting_reason: "child_agent", waiting_on_agent_id: "demo-tester", last_active_at: timestamp } });
+            break;
+          case 2:
+            applyServerMessage({ type: "agent.updated", agent_id: "demo-tester", changes: { status: "done", current_tool: null, last_active_at: timestamp } });
+            break;
+          case 3:
+            applyServerMessage({ type: "agent.updated", agent_id: "lead", changes: { status: "thinking", waiting_reason: null, waiting_on_agent_id: null, last_active_at: timestamp } });
+            applyServerMessage({ type: "agent.stopped", agent_id: "demo-tester" });
+            break;
+          case 4:
+            applyServerMessage({ type: "agent.updated", agent_id: "reviewer", changes: { status: "error", last_active_at: timestamp } });
+            break;
+          case 5:
+            applyServerMessage({ type: "agent.updated", agent_id: "reviewer", changes: { status: "thinking", last_active_at: timestamp } });
         }
+        step.current = (step.current + 1) % STEP_DELAYS.length;
         tick();
-      }, 5000 + Math.floor(Math.random() * 5001));
+      }, STEP_DELAYS[step.current]);
     };
     tick();
     return () => window.clearTimeout(timeout);

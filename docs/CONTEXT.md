@@ -122,3 +122,12 @@ Phase 4A is implemented with no backend/native changes. Roles provide homes; wor
 Pure planner/seat and incremental Pixi tests cover aliases, overrides, invalid waits, stable reservations, walkable crowd targets, uneven frame cadence and terminal presentation. Real local Chromium visual smoke uses controlled normalized WebSocket snapshots through the actual frontend, not new provider capability evidence. Screenshots under docs/images show homes, attention, coordination, crowding and completion. Doorway congestion and permanently displaced seated actors were corrected within existing routing/separation.
 
 Decision 28 remains unchanged. Independent DevRouter sessions may still reuse a repository-derived Office ID; that external issue remains open. Dense zones trade scale/labels for space. Phase 4B should refine readability/interaction based on daily team use; it is not implemented here.
+
+
+## Phase 4B — Team Interaction & Coordination Cues
+
+Phase 4B adds only frontend interaction interpretation over Phase 4A destinations. Store lifecycle handling owns bounded ephemeral cues; the renderer follows live positions and projects explicit current waits. Native/provenance/semantic identity, backend model and terminal grace are unchanged. Fresh-session Decision 28 and the independent same-repository DevRouter Office-ID reuse limitation remain open and untouched.
+
+Controlled Chromium WebSocket fixtures exercise new child starts, duplicate starts/DONE, moving endpoints, wait clear, filtered targets, snapshots, cue expiry and offline cleanup. Screenshots at start/midpoint/expired states reveal visual timing; first visual review exposed hidden travelling text and overlapping blocked labels, so the final vocabulary uses compact symbols and a short legend. This is frontend verification, not new provider/runtime capability evidence.
+
+Remaining UX limits: connectors can cross furniture/one another; very dense teams still inherit Phase 4A scale/label compromises; transient cues are intentionally short and not replayed. Filtered relations do not invent local targets. Phase 4C should refine readability and selection/accessibility from daily use, without adding inferred teams or reopening native infrastructure.
