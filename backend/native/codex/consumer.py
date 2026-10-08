@@ -9,7 +9,12 @@ from typing import Any
 from backend.adapters.codex_native import CodexNativeAdapter
 from backend.config import CodexNativeSettings
 from backend.models import AgentState
-from backend.native.codex.bindings import BindingConflict, BindingRegistry, NativeThreadBinding
+from backend.native.codex.bindings import (
+    BindingConflict,
+    BindingRegistry,
+    NativeThreadBinding,
+    same_generation,
+)
 from backend.native.codex.health import NativeFailure, NativeHealth
 from backend.native.codex.profiles import PAGINATED_V1, profile_for
 from backend.native.codex.protocol import (
@@ -235,7 +240,9 @@ class CodexNativeConsumer:
             raise NativeUnavailable("Codex native integration is disabled")
         async with self.lock:
             agent = self.runtime.registry.get(office_agent_id)
-            if expected_generation and agent.started_at.isoformat() != expected_generation:
+            if expected_generation is not None and not same_generation(
+                agent.started_at, expected_generation
+            ):
                 raise BindingConflict("Stale Office generation handshake")
             if agent.provider != "codex":
                 raise BindingConflict("Only a Codex Office Agent can bind a Codex thread")
@@ -255,7 +262,9 @@ class CodexNativeConsumer:
             async with ReadOnlyClient(socket, version, ignore) as client:
                 metadata = await self.read_metadata(client, thread_id)
                 await self.validate_workspace(metadata, office_agent_id)
-            if self.runtime.registry.get(agent.id).started_at.isoformat() != binding.generation:
+            if not same_generation(
+                self.runtime.registry.get(agent.id).started_at, binding.generation
+            ):
                 raise BindingConflict("Office Agent changed during the binding handshake")
             self.bindings.add(binding)
             self.workspaces[thread_id] = metadata.cwd

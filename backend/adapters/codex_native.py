@@ -8,7 +8,12 @@ from datetime import datetime
 
 from backend.models import Agent, AgentEvent, AgentEventType, AgentState, EventSource
 from backend.native.codex.activity import Activity, ReplayCache
-from backend.native.codex.bindings import BindingConflict, BindingRegistry, NativeThreadBinding
+from backend.native.codex.bindings import (
+    BindingConflict,
+    BindingRegistry,
+    NativeThreadBinding,
+    same_generation,
+)
 from backend.native.codex.protocol import Fact, NativeUnavailable, ThreadMetadata
 from backend.runtime.office import OfficeRuntime
 
@@ -52,7 +57,7 @@ class CodexNativeAdapter:
             agent = self.runtime.registry.get(binding.office_agent_id)
         except KeyError:
             return None
-        return binding if agent.started_at.isoformat() == binding.generation else None
+        return binding if same_generation(agent.started_at, binding.generation) else None
 
     async def display(
         self, thread: str, *, force: bool = False, exit_code: int | None = None
