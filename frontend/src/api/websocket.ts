@@ -1,31 +1,11 @@
-import type { Agent, AgentEvent } from "../models/agent";
+import type { AgentEvent, ServerMessage } from "../models/agent";
 import { useAgentStore } from "../store/agents";
 
-type ServerMessage =
-  | { type: "snapshot"; agents: Agent[] }
-  | { type: "agent.started"; agent: Agent }
-  | { type: "agent.updated"; agent_id: string; changes: Partial<Agent> }
-  | { type: "agent.stopped"; agent_id: string };
 
 export function applyServerMessage(message: ServerMessage): void {
   const store = useAgentStore.getState();
-  if (message.type === "snapshot") {
-    store.replaceAgents(message.agents);
-    return;
-  }
-  if (message.type === "agent.started") {
-    store.addAgent(message.agent);
-    return;
-  }
-  if (message.type === "agent.stopped") {
-    store.setAgentStatus(message.agent_id, "offline");
-    window.setTimeout(() => {
-      const current = useAgentStore.getState().agents[message.agent_id];
-      if (current?.status === "offline") useAgentStore.getState().removeAgent(message.agent_id);
-    }, 5000);
-    return;
-  }
-  store.updateAgent(message.agent_id, message.changes);
+  store.receiveMessage(message);
+  if (message.type !== "agent.updated") return;
   const event: AgentEvent = {
     type: "agent.updated",
     agent_id: message.agent_id,

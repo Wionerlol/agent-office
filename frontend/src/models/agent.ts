@@ -67,3 +67,9 @@ export interface CodexUsage {
   plan_type: string | null;
   updated_at: string | null;
 }
+
+export type ServerMessage =
+  | { type: "snapshot"; agents: Agent[] }
+  | { type: "agent.started"; agent: Agent }
+  | { type: "agent.updated"; agent_id: string; changes: Partial<Agent> }
+  | { type: "agent.stopped"; agent_id: string };

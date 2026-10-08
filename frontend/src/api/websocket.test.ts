@@ -1,3 +1,5 @@
+import { cleanup, renderHook } from "@testing-library/react";
+import { useInteractionCleanup } from "../hooks/useInteractionCleanup";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useAgentStore } from "../store/agents";
@@ -7,8 +9,9 @@ describe("WebSocket messages", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     useAgentStore.getState().reset();
+    renderHook(() => useInteractionCleanup());
   });
-  afterEach(() => vi.useRealTimers());
+  afterEach(() => { cleanup(); vi.useRealTimers(); });
 
   it("normalizes snapshots and incremental updates into the store", () => {
     applyServerMessage({

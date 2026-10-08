@@ -48,16 +48,18 @@ afterEach(() => {
   sceneryMocks.scenes.length = 0;
 });
 
+const figures = (stage: import("pixi.js").Container) => stage.children.filter((child) => !child.label?.startsWith("interaction-"));
+
 describe("OfficeScene", () => {
   it.each(["steady", "uneven"])("simultaneous arrivals reach their areas with %s frame timing", async (timing) => {
     const team = demoAgents.slice(0, 6).map((agent) => ["backend", "tester", "researcher"].includes(agent.id)
       ? { ...agent, status: "thinking" as const } : agent);
     render(<OfficeScene agents={team} deskCount={8} />);
-    await waitFor(() => expect(sceneryMocks.scenes[0].stage.children).toHaveLength(6));
+    await waitFor(() => expect(figures(sceneryMocks.scenes[0].stage)).toHaveLength(6));
     const scene = sceneryMocks.scenes[0];
     for (let frame = 0; frame < 2000; frame++) scene.tick?.({ deltaTime: timing === "steady" ? 1 : [0.5, 1.5, 3][frame % 3] });
     const destinations = [[250, 244], [891, 371], [865, 170], [87, 132], [433, 561], [87, 462]];
-    scene.stage.children.forEach((figure, index) => {
+    figures(scene.stage).forEach((figure, index) => {
       expect(Math.hypot(figure.x - destinations[index][0], figure.y - destinations[index][1]), team[index].id).toBeLessThan(4);
     });
   });
@@ -65,9 +67,9 @@ describe("OfficeScene", () => {
   it("updates semantic destinations incrementally and holds DONE at its current position", async () => {
     const tester = { ...demoAgents[1], status: "thinking" as const };
     const { rerender } = render(<OfficeScene agents={[tester]} deskCount={8} />);
-    await waitFor(() => expect(sceneryMocks.scenes[0].stage.children).toHaveLength(1));
+    await waitFor(() => expect(figures(sceneryMocks.scenes[0].stage)).toHaveLength(1));
     const scene = sceneryMocks.scenes[0];
-    const figure = scene.stage.children[0];
+    const figure = figures(scene.stage)[0];
     for (let frame = 0; frame < 300; frame++) scene.tick?.({ deltaTime: 1 });
     // Existing routing considers a waypoint reached within four pixels.
     expect(Math.hypot(figure.x - 891, figure.y - 371)).toBeLessThan(4);
@@ -75,16 +77,38 @@ describe("OfficeScene", () => {
     rerender(<OfficeScene agents={[{ ...tester, status: "done" }]} deskCount={8} />);
     for (let frame = 0; frame < 100; frame++) scene.tick?.({ deltaTime: 1 });
     expect({ x: figure.x, y: figure.y }).toEqual(before);
-    expect(scene.stage.children[0]).toBe(figure);
+    expect(figures(scene.stage)[0]).toBe(figure);
     expect(sceneryMocks.scenes).toHaveLength(1);
     expect(sceneryMocks.drawOfficeScenery).toHaveBeenCalledTimes(1);
+  });
+
+  it("interaction updates preserve settled positions and teardown releases overlay resources", async () => {
+    const agents = [demoAgents[0], { ...demoAgents[1], status: "thinking" as const }];
+    const view = render(<OfficeScene agents={agents} deskCount={8} />);
+    await waitFor(() => expect(figures(sceneryMocks.scenes[0].stage)).toHaveLength(2));
+    const scene = sceneryMocks.scenes[0];
+    for (let i = 0; i < 900; i++) scene.tick?.({ deltaTime: 1 });
+    const before = figures(scene.stage).map((a) => [a.x, a.y]);
+    const now = Date.now();
+    view.rerender(<OfficeScene agents={agents} deskCount={8} cues={[{
+      id: "delegation", kind: "delegation", sourceAgentId: agents[0].id, targetAgentId: agents[1].id,
+      createdAt: now, expiresAt: now + 3000,
+    }]} />);
+    scene.tick?.({ deltaTime: 1 });
+    expect(figures(scene.stage).map((a) => [a.x, a.y])).toEqual(before);
+    const markers = scene.stage.children.find((a) => a.label === "interaction-markers") as import("pixi.js").Container;
+    expect(markers.children).toHaveLength(1);
+    expect(sceneryMocks.scenes).toHaveLength(1);
+    view.unmount();
+    expect(markers.destroyed).toBe(true);
+    expect(scene.stage.children.some((a) => a.label?.startsWith("interaction-"))).toBe(false);
   });
 
   it("exposes content-free user attention in the accessible scene description", async () => {
     const waiting = { ...demoAgents[1], status: "waiting" as const, waiting_reason: "user_input" };
     const view = render(<OfficeScene agents={[waiting]} deskCount={8} />);
     expect(view.getByRole("img")).toHaveAccessibleName(/Tester: waiting, \? Needs you/);
-    await waitFor(() => expect(sceneryMocks.scenes[0].stage.children).toHaveLength(1));
+    await waitFor(() => expect(figures(sceneryMocks.scenes[0].stage)).toHaveLength(1));
   });
   it("fits the complete office canvas inside its responsive host", async () => {
     const { container } = render(<OfficeScene agents={[]} deskCount={8} />);

@@ -9,10 +9,14 @@ import { isOfficePositionWalkable, routeBetween } from "./navigation";
 import { drawOfficeScenery, type OfficeScenery } from "./scenery";
 import { spatialBehaviorFor, type VisualState } from "./visual";
 
+import type { InteractionCue } from "../models/interaction";
+import { InteractionLayer, interactionDescription } from "./interactions";
+
 interface OfficeSceneProps {
   agents: Agent[];
   deskCount: number;
   usage?: CodexUsage | null;
+  cues?: readonly InteractionCue[];
 }
 
 interface RenderedAgent {
@@ -121,8 +125,9 @@ function createRenderedAgent(agent: Agent, selectAgent: (id: string) => void): R
   };
 }
 
-export function OfficeScene({ agents, deskCount, usage = null }: OfficeSceneProps) {
+export function OfficeScene({ agents, deskCount, usage = null, cues = [] }: OfficeSceneProps) {
   const hostRef = useRef<HTMLDivElement>(null);
+  const interactionsRef = useRef<InteractionLayer | null>(null);
   const appRef = useRef<Application | null>(null);
   const sceneryRef = useRef<OfficeScenery | null>(null);
   const renderedRef = useRef(new Map<string, RenderedAgent>());
@@ -151,6 +156,7 @@ export function OfficeScene({ agents, deskCount, usage = null }: OfficeSceneProp
       app.stage.sortableChildren = true;
       sceneryRef.current = drawOfficeScenery(app, atmosphereRef.current);
       appRef.current = app;
+      interactionsRef.current = new InteractionLayer(app.stage);
       let movementFrames = 0;
       app.ticker.add((ticker) => {
         // Fixed movement steps make collision resolution independent of render frame timing.
@@ -221,11 +227,16 @@ export function OfficeScene({ agents, deskCount, usage = null }: OfficeSceneProp
             }
           }
         }
+        interactionsRef.current?.draw(new Map([...renderedAgents].map(([id, r]) => [id, {
+          x: r.container.x, y: r.container.y, scale: r.container.scale.x,
+        }])), Date.now());
       });
       setReady(true);
     });
     return () => {
       cancelled = true;
+      interactionsRef.current?.destroy();
+      interactionsRef.current = null;
       renderedAgents.clear();
       deskAssignments.clear();
       slots.clear();
@@ -322,8 +333,12 @@ export function OfficeScene({ agents, deskCount, usage = null }: OfficeSceneProp
     }
   }, [agents, deskCount, ready, selectAgent]);
 
+  useEffect(() => {
+    interactionsRef.current?.setState(agents, cues);
+  }, [agents, cues, ready]);
+
   return <div className="office-scene" ref={hostRef} role="img" aria-label={`Live agent office map. ${agents.map((agent) => {
     const plan = spatialBehaviorFor(agent, "assigned desk");
     return `${agent.name}: ${agent.status}, ${plan.indicator ?? plan.destinationZone.replaceAll("_", " ")}`;
-  }).join(". ")}`} />;
+  }).join(". ")}. ${interactionDescription(agents, cues, Date.now())}`} />;
 }

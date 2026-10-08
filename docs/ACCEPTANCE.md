@@ -1,6 +1,6 @@
 # Agent Office Acceptance Criteria
 
-Current state: Phases 1–3B v1.1 and fresh-session investigation COMPLETE; Phase 4A COMPLETE; Phase 4B NOT YET IMPLEMENTED. Earlier phase sections below retain their historical evidence.
+Current state: Phases 1–3B v1.1 and fresh-session investigation COMPLETE; Phase 4A COMPLETE; Phase 4B COMPLETE; Phase 4C NOT YET IMPLEMENTED. Earlier phase sections below retain their historical evidence.
 
 ## Fresh-session deterministic correlation investigation — COMPLETE
 
@@ -262,3 +262,20 @@ Required verification remains full backend/frontend tests, both linters, product
 UX limits: dense grids shrink characters/may hide labels; returning agents take free seats rather than indefinitely reserving empty places; coordination shares the lounge without an organization graph. Phase 4B remains unimplemented.
 
 Phase 4A local verification (2026-10-08): `uv run pytest -q` 210 passed, two existing deprecation warnings; `uv run ruff check backend main.py` passed; `npm test -- --reporter=dot` 75 passed across 14 files; `npm run lint`, `npm run build` and `git diff --check` passed. Chromium fixture smoke completed with zero page errors; all three screenshots were inspected. Hosted check results are tied to the final PR commit.
+
+
+## Phase 4B — Team Interaction & Coordination Cues
+
+- [x] New child starts generate one transient delegation; duplicate starts and reconnect snapshots do not replay it.
+- [x] Explicit visible child waits retain a live-endpoint coordination link; clearing waits or hiding/removing targets removes it.
+- [x] Child DONE transitions produce one returning handoff; repeated DONE does not duplicate it or alter the parent.
+- [x] ERROR has persistent `!` and brief local emphasis, without parent failure inference.
+- [x] User attention remains strongest; ordinary parentage creates no permanent graph.
+- [x] Store cue history, dedup keys and Pixi primitives are bounded; expiry/removal/unmount clean resources.
+- [x] Scripted simulation uses shared normalized lifecycle messages; pause stops scripted changes without freezing TTL cleanup.
+- [x] Existing spatial destinations/routing/collisions and semantic names remain; backend/native infrastructure is unchanged.
+- [x] Controlled Chromium verifies duplicate start/DONE, TTL start/midpoint/expired states, moving coordination, handoff, simultaneous blocked/delegation, user attention, wait clear, project filtering, reconnect snapshots and offline cleanup.
+
+Visual evidence under docs/images/interaction-*.png uses only normalized disposable fixture Agents, not private runtime content. Required local suites and hosted Backend/Frontend remain mandatory; exact hosted results belong to the final PR commit. Phase 4C is not implemented.
+
+Phase 4B local verification (2026-10-08): `uv run pytest -q` 210 passed / two existing deprecation warnings; `uv run ruff check backend main.py` passed; frontend `npm test -- --reporter=dot` 90 passed / 16 files; `npm run lint`, `npm run build` and `git diff --check` passed. Final Chromium fixture smoke reports zero page errors and all eight timed screenshots were inspected. An early fixed 5.1s browser cleanup wait was too tight for message receipt plus the 250ms sweep; observing receipt and polling expiry corrected the fixture. No product assertions or grace duration were weakened. Hosted results are attached to the final PR commit.

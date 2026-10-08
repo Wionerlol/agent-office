@@ -7,6 +7,7 @@ import { Achievements } from "./components/Achievements";
 import { CodexUsageIndicator } from "./components/CodexUsageIndicator";
 import { ProjectSelector } from "./components/ProjectSelector";
 import { demoAgents } from "./data/demo";
+import { useInteractionCleanup } from "./hooks/useInteractionCleanup";
 import { useSimulation } from "./hooks/useSimulation";
 import { OfficeScene } from "./office/OfficeScene";
 import { useAgentStore } from "./store/agents";
@@ -38,6 +39,7 @@ function App() {
     }
   }, [demoMode]);
   useSimulation(demoMode);
+  useInteractionCleanup();
 
   return (
     <main>
@@ -56,7 +58,8 @@ function App() {
       <Achievements agents={agents} />
       <section className="workspace">
         <div className="scene-column">
-          <OfficeScene agents={agents} deskCount={store.deskCount} usage={store.codexUsage} />
+          <OfficeScene agents={agents} deskCount={store.deskCount} usage={store.codexUsage} cues={store.interactionCues} />
+          <p className="interaction-legend">? Needs you · ↔ Child wait · → Delegated · ✓ Complete · ! Blocked</p>
         </div>
         <AgentPanel agent={selected} events={store.recentEvents} onClose={() => store.selectAgent(null)} />
       </section>
