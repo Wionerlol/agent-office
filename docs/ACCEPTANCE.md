@@ -1,5 +1,16 @@
 # Agent Office Acceptance Criteria
 
+## Fresh-session deterministic correlation investigation — COMPLETE
+
+- Investigation-only; no production binding/domain/frontend changes or Phase 3B v1.2. Existing explicit UUID paths, generation checks, replay, native activity and fallback behavior remain unchanged.
+- Current CLI/help/generated schemas and installed DevRouter launch code inspected. [The report](runtime-probe/FRESH_SESSION_CORRELATION.md) includes all candidates, classifications, minimal sanitized samples and reproduction boundaries.
+- Real matching CLI/daemon 0.161.0 exercised fresh direct launch, two concurrent direct launches and two actual concurrent DevRouter launches in the same repository. Five native thread/started events were collected before any model turn. No controlled nonce was present; generic source/originator did not distinguish ownership. No prohibited identity heuristic was used.
+- Observer reconnect read all five running threads without recovering Office ownership. Final native diagnostics remained unbound with zero bindings. DevRouter's duplicate repository-derived Office ID is an explicit external limitation, not falsely reported as two independent Office registrations.
+- PATH CLI 0.160.0 fresh-start feature incompatibility and an initial folder-trust/setup run are excluded from successful evidence. Matching installed CLI selection did not restart/reconfigure the shared daemon. No turns, hooks, controller/proxy or approval automation were added.
+- Outcome: **UPSTREAM / RUNTIME LIMITATION**. Preserve explicit CLI bind; recommend Phase 4 separately. Do not continue indefinite recovery work to force automatic discovery.
+
+Verification on 2026-10-08: `uv run pytest -q` **210 passed / 2 existing deprecation warnings**; `uv run ruff check backend main.py` passed; frontend `npm test -- --reporter=dot` **29 passed / 12 files**, `npm run lint` and `npm run build` passed. No tracked diagnostic/correlation code was added, so no synthetic tests are represented as fresh runtime evidence. Required `Backend` / `Frontend` checks and `git diff --check` remain delivery gates; exact hosted results belong to the final PR commit.
+
 ## Phase 3B v1.1 Native Integration Hardening — COMPLETE
 
 - Explicit literal-resume or supplied-UUID launch binding works without a user HTTP request; ambiguous/fresh/picker/name/--last cases remain unbound. Background retries preserve the same Office generation and cancel on exit; conflicts fail closed. No CWD/process/terminal guessing.

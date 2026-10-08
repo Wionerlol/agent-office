@@ -7,7 +7,8 @@
 3. Phase 3A Native Runtime Capability Probe — COMPLETE: inspect installed CLI/daemon/DevRouter, isolate content-denying capture and selected-thread observation, exercise real A–F scenarios, publish reviewed matrix/samples, run regressions and prepare a PR.
 4. Phase 3B Native Runtime Adapter v1 — COMPLETE. Explicit bindings, read-only versioned consumer, waiting context, semantic child normalization, bounded replay/reconciliation and concurrent activity aggregation are implemented. Full regression and real daemon/TUI smoke passed; preserve these gates for revisions.
 5. Phase 3B v1.1 — COMPLETE: explicit-resume/operator CLI binding, generation-aware retries, per-thread recovery, reviewed profiles and local health diagnostics.
-6. Phase 3B v2 / Phase 4 — NOT YET IMPLEMENTED. Prioritize explicit launcher binding ergonomics, version validation, per-thread failure isolation and long-running replay/reuse before new spatial features.
+6. Fresh-session deterministic correlation investigation — COMPLETE, investigation-only: current-runtime limitation; no Phase 3B v1.2 feature. See [evidence and decision matrix](runtime-probe/FRESH_SESSION_CORRELATION.md), Decision 28 and the explicit operator workflow in NATIVE_RUNTIME.md.
+7. Phase 4 — NOT YET IMPLEMENTED; recommended next separate task. Do not hold spatial work behind heuristic fresh binding or indefinite runtime recovery. Further native work requires new upstream evidence or a separately scoped correctness issue.
 
 ## Completed Phase 2: Semantic Agent Model
 

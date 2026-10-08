@@ -57,6 +57,19 @@ POST bind requires both IDs and an already-registered Codex Office Agent. The na
 
 Bindings retain the Office instance's started_at generation and survive reconnects. A new instance reusing the same Office ID cannot inherit the old binding silently. Binding identity, including completed child tombstones, is retained up to 1,024 records for this OfficeRuntime session; capacity exhaustion fails clearly rather than evicting identities. Server restart requires explicit rebinding. No database or persistent registry is added.
 
+## Fresh-session operator workflow
+
+Fresh automatic binding is an **UPSTREAM / RUNTIME LIMITATION** in the exercised current paths. [The focused investigation](runtime-probe/FRESH_SESSION_CORRELATION.md) records actual concurrent direct/DevRouter launches, failed nonce candidates and reconnect evidence. No v1.2 binding change is implemented.
+
+1. Start `office-run codex --id lead` normally, or `devrouter --office`. Native observation remains unbound; existing wrapper/process fallbacks continue.
+2. Obtain the **exact UUID of that session** from operator-controlled Codex session information or an explicitly owned structured creation response. Do not select a candidate by repository, newest session, name, timing or OS process. This project supplies no reliable fresh UUID discovery command; if the operator cannot establish exact ownership, leave it unbound.
+3. Use `uv run agent-office native bind lead EXACT_UUID`, then `uv run agent-office native status`. For DevRouter, use the Office ID listed in status rather than `lead`. No curl/API payload construction is necessary. Native integration must be enabled and that native thread loaded.
+4. For later known-ID launches, use `office-run codex --id lead resume EXACT_UUID` or `devrouter --office -- resume EXACT_UUID` for the existing automatic explicit handshake. Resume requires a resumable session; do not inject a turn merely to materialize an empty experiment thread.
+
+Installed DevRouter uses one repository-derived Office ID even across separate homes. Do not bind two concurrent same-repository DevRouter sessions to that shared ID. Use distinct explicit office-run IDs for independently monitored concurrent sessions; this investigation does not change the external router. Both paths lack fresh automatic correlation, and the router has this additional identity limitation.
+
+The PATH CLI 0.160.0 fresh launch encountered a daemon feature mismatch during this investigation. Do not restart the shared daemon or change shared features to bypass it. The evidence run used the already-installed matching 0.161.0 binary via an isolated experimental PATH, not an application/configuration upgrade. Unknown versions still fail closed.
+
 ## Read-only observation and version compatibility
 
 Reviewed exact app-server versions are 0.159.3, 0.160.0, 0.160.1 and 0.161.0, selected through profiles.py. There is no open-ended compatible-version range. Phase 3A supplied actual facts for the first two; Phase 3B production smoke exercises daemon 0.160.1 with CLI 0.160.0. Local 0.160.0/0.160.1 schemas have matching ThreadItem, SubAgentActivityKind, Turn and ThreadItemEntry definitions. The v1.1 review additionally compares 0.161.0 Thread/ThreadStatus/Turn/ThreadItem/ThreadItemEntry/SubAgentActivityKind against 0.160.1 and exercises the consumed subset on the actual daemon. The initialize userAgent must agree with daemon discovery; unknown versions or mismatches fail closed to fallbacks. Older profiles are not claimed to have undergone the new production smoke.

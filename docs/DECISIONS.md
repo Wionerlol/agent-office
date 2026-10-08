@@ -403,3 +403,19 @@ Operators need to distinguish observer failure from agent activity, see whether 
 - New AgentState values for connection health.
 - Raw exception/native content in API errors, permanent probe logging or UUID labels on characters.
 - New LAN/public native control surfaces.
+
+---
+
+## Decision 28: Fresh-session correlation stops at the current runtime boundary
+
+**Decision**
+Treat fresh-session automatic binding as an upstream/current-runtime limitation. Do not implement Phase 3B v1.2 or heuristics. Keep literal resume UUID, explicit argument/environment and operator native bind paths intact. Require a future demonstrated launcher-owned structured token or an explicitly approved creation/attach contract before revisiting automatic correlation. Recommend Phase 4 as a separate next task.
+
+**Reason**
+The installed 0.160.0 fresh TUI was blocked by shared feature incompatibility; matching installed 0.161.0 CLI/daemon experiments produced five real fresh threads through direct office-run and actual DevRouter. Same-repository concurrent pairs exposed different native IDs but identical vscode/codex-tui classifications, with no controlled correlation/originator-override nonce. Observer reconnect preserved native IDs without revealing Office ownership. Installed DevRouter also reuses a repository-derived Office ID across independent homes. See runtime-probe/FRESH_SESSION_CORRELATION.md for scoped evidence, failed candidates and limits; no configuration/daemon restart or injected turn was used to force success.
+
+**Rejected Alternatives**
+- Newest/only thread, repository/PID/timing/name/prompt guesses or terminal scraping as automatic identity.
+- Treat generic source/session IDs or schema-only metadata possibilities as confirmed causal ownership.
+- Become a Codex turn controller, inject a first turn, install hooks/configuration or restart the shared daemon to solve observation identity.
+- Keep expanding runtime recovery infrastructure after this focused negative result.
