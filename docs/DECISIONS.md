@@ -649,3 +649,17 @@ Laptop/secondary windows need a complete office and reachable details rather tha
 - Rebuild responsive scenery or maintain separate layout engines.
 - Keep a fixed side panel at every width or introduce a modal drawer/focus trap.
 - Recreate all graphics/badges on every hover/selection change.
+
+
+## Decision 45: Binding generations identify exact aware instants, not timestamp spelling
+
+**Decision**
+Centralize native generation comparison in the binding boundary. Parse explicitly timezone-aware ISO date/time strings and compare UTC datetime values at exact microsecond precision. Accept equivalent Z and numeric offsets; reject malformed/date-only/naive timestamps, unknown -00:00 offsets and excess fractional precision. Preserve both pre-read and post-read generation checks and adapter ownership guards. Keep the optional legacy API field and existing CLI/wrapper generation payloads unchanged.
+
+**Reason**
+The Agent API serializes UTC started_at with Z, while Python isoformat() emits +00:00. Raw string comparison incorrectly rejected the manual CLI handshake for the same Agent instance. Parsing at the server boundary fixes both explicit entry paths while preserving actual replacement-instance and registration-race protection. Explicit format/precision constraints avoid silently assuming a timezone or truncating a different generation into equality.
+
+**Rejected Alternatives**
+- Rewrite only the CLI's Z suffix, leaving other clients and ownership checks dependent on spelling.
+- Remove generation checks, compare rounded clock values, or assume local/UTC timezone for naive input.
+- Change daemon/CLI settings, binding identity or native observation authority to compensate.

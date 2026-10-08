@@ -1,6 +1,31 @@
 """Explicit, sticky, bounded bindings for one OfficeRuntime lifetime."""
 
+import re
 from dataclasses import dataclass
+from datetime import UTC, datetime
+
+
+def same_generation(started_at: datetime, generation: str) -> bool:
+    """Compare exact instants, rejecting ambiguous or lossy generation timestamps.
+
+    Accept explicit ISO date/time with seconds, up to microsecond precision and
+    Z or a numeric timezone offset. -00:00 denotes an unknown offset, not UTC.
+    Never assume the local timezone for a naive registered instance or request.
+    """
+    if (
+        started_at.utcoffset() is None
+        or generation.endswith("-00:00")
+        or not re.fullmatch(
+            r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)",
+            generation,
+        )
+    ):
+        return False
+    try:
+        expected = datetime.fromisoformat(generation)
+        return started_at.astimezone(UTC) == expected.astimezone(UTC)
+    except (ValueError, OverflowError):
+        return False
 
 
 class BindingConflict(ValueError):
