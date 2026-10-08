@@ -1,10 +1,21 @@
 import type { Agent } from "../models/agent";
 
 const now = new Date().toISOString();
+const base: Omit<Agent, "id" | "name" | "role" | "status"> = {
+  provider: "demo", pid: null, repository: "agent-office", worktree: null, branch: "main",
+  task: null, current_tool: null, changed_files: [], responsibilities: [],
+  started_at: now, last_active_at: now, metadata: {},
+};
 
+// The same normalized fields and spatial planner are used for live agents and simulation.
 export const demoAgents: Agent[] = [
-  { id: "planner", name: "Planner", provider: "demo", pid: null, repository: "agent-office", worktree: null, branch: "main", status: "thinking", task: "Plan the next milestone", current_tool: null, changed_files: [], started_at: now, last_active_at: now, metadata: { role: "Product" } },
-  { id: "frontend", name: "Frontend", provider: "demo", pid: null, repository: "agent-office", worktree: null, branch: "feat/office", status: "coding", task: "Build office scene", current_tool: "vite", changed_files: ["frontend/src/App.tsx"], started_at: now, last_active_at: now, metadata: { role: "UI" } },
-  { id: "backend", name: "Backend", provider: "demo", pid: null, repository: "agent-office", worktree: null, branch: "feat/runtime", status: "testing", task: "Verify state engine", current_tool: "pytest", changed_files: ["backend/state/engine.py"], started_at: now, last_active_at: now, metadata: { role: "API" } },
-  { id: "researcher", name: "Researcher", provider: "demo", pid: null, repository: "agent-office", worktree: null, branch: "main", status: "searching", task: "Review adapter protocols", current_tool: "search", changed_files: [], started_at: now, last_active_at: now, metadata: { role: "Research" } },
+  { ...base, id: "backend", name: "Backend Engineer", role: "backend", status: "coding", task: "Implement interfaces" },
+  { ...base, id: "tester", name: "Tester", role: "tester", status: "testing", parent_agent_id: "lead", current_tool: "pytest" },
+  { ...base, id: "researcher", name: "Researcher", role: "researcher", status: "searching", current_tool: "rg" },
+  { ...base, id: "reviewer", name: "Reviewer", role: "reviewer", status: "thinking" },
+  { ...base, id: "lead", name: "Lead", role: "lead", status: "waiting", waiting_reason: "child_agent", waiting_on_agent_id: "tester" },
+  { ...base, id: "frontend", name: "Frontend Engineer", role: "frontend", status: "waiting", waiting_reason: "user_input" },
+  { ...base, id: "qa-home", name: "QA Thinker", role: "qa", status: "thinking", parent_agent_id: "lead" },
+  { ...base, id: "research-home", name: "Research Thinker", role: "research", status: "thinking" },
+  { ...base, id: "engineer-home", name: "Engineer Thinker", role: "backend_engineer", status: "thinking" },
 ];

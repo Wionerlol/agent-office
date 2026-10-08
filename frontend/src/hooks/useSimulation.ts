@@ -13,13 +13,20 @@ export function useSimulation(enabled: boolean) {
     let timeout: number;
     const tick = () => {
       timeout = window.setTimeout(() => {
-        const { agents, setAgentStatus, addEvent } = useAgentStore.getState();
+        const { agents, updateAgent, addEvent } = useAgentStore.getState();
         const current = Object.values(agents);
         if (current.length) {
           const agent = current[Math.floor(Math.random() * current.length)];
           const status = SIMULATION_STATES[Math.floor(Math.random() * SIMULATION_STATES.length)];
-          setAgentStatus(agent.id, status);
-          addEvent({ type: "agent.state_changed", agent_id: agent.id, timestamp: new Date().toISOString(), payload: { to: status } });
+          const waiting = status === "waiting";
+          const child = waiting && agent.id === "lead" && agents.tester ? "tester" : null;
+          const timestamp = new Date().toISOString();
+          const context = {
+            waiting_reason: waiting ? (child ? "child_agent" : "user_input") : null,
+            waiting_on_agent_id: child,
+          };
+          updateAgent(agent.id, { status, last_active_at: timestamp, ...context });
+          addEvent({ type: "agent.state_changed", agent_id: agent.id, timestamp, payload: { to: status, ...context } });
         }
         tick();
       }, 5000 + Math.floor(Math.random() * 5001));

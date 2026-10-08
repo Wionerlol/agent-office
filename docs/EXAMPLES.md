@@ -211,3 +211,26 @@ GOOD: a malformed Tester snapshot shows degraded/fallback active while Lead and 
 BAD: newest thread, only visible thread, same CWD or OS proximity selects a native identity. A fresh TUI without explicit identity remains unbound. Generated nickname/null role still never replace Tester responsibilities.
 
 GOOD: `agent-office native validate --thread UUID` reports structural check names with no questions/output/patches. Unknown versions report review_required instead of silently enabling production parsing.
+
+
+## Phase 4A spatial examples
+
+| Normalized Agent | Home | Destination/behavior |
+| --- | --- | --- |
+| Tester, THINKING | Test Lab | Test Lab contemplation |
+| Researcher, THINKING | Library | Library contemplation |
+| Reviewer, THINKING | Review Area | Review contemplation |
+| Backend, THINKING | Desk | Desk contemplation |
+| Backend, TESTING | Desk | Test Lab workstation |
+| Tester, SEARCHING | Test Lab | Library |
+| Researcher, CODING | Library | Desk |
+| Tester, WAITING/user_input | Test Lab | NEEDS YOU with `?` |
+| Lead, WAITING/child_agent with Tester ID | Desk | Lounge coordination, Child wait |
+| Lead, generic WAITING | Desk | General lounge waiting |
+| Child, DONE | Role home | Immediate celebration at current position |
+
+GOOD: several Testers keep distinct seats when a Researcher updates. Unknown `custom specialist` uses a desk. Backend-supplied semantic names remain visible.
+
+BAD: infer role from pytest; send a testing Reviewer home instead of Test Lab; infer waiting from parentage; display questions/UUIDs; reshuffle everyone on unrelated updates.
+
+Pause the normalized demo to inspect roles; Resume exercises the same live scene path. Reviewed screenshots: [role homes](images/spatial-role-homes.png), [attention/team](images/spatial-attention-team.png), [completed child](images/spatial-child-done.png).

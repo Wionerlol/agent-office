@@ -47,7 +47,7 @@ Semantic Agent Model is also complete. The office should communicate who each ag
 
 Keep role (stable responsibility), task (current assignment), state (runtime activity), and tool (executable) separate. A Backend Engineer running pytest stays a Backend Engineer. Semantic identity comes from explicit runtime metadata and project definitions, never from current tool use or prompt inference.
 
-That phase added lightweight project definitions and parent references, with semantic names on existing characters and details in AgentPanel. State continues to determine current destinations. Role-based home zones and organization charts remain future work.
+That phase added lightweight project definitions and parent references, with semantic names on existing characters and details in AgentPanel. Phase 4A separates role homes from temporary activity destinations. Organization charts remain out of scope.
 
 Phase 3A Native Runtime Capability Probe is complete. Its evidence report distinguishes native facts from structured observations and process/heuristic fallbacks. The real Codex/DevRouter path exposes explicit user-input waiting, file-change/command lifecycles and subagent parentage; it does not establish continuous THINKING/CODING coverage or stable native roles. See [the capability matrix](runtime-probe/CAPABILITY_MATRIX.md).
 
@@ -65,6 +65,11 @@ Examples:
 - many active agents -> busier office ambience;
 - PR ready -> review-oriented behavior.
 
-These remain future extensions. The current implementation adds semantic identity on top of the completed runtime-state foundation.
+Test Lab activity, user attention and usage atmosphere are implemented. Failure-specific room signals, busier ambience and PR-ready behavior remain future extensions. Phase 4A adds role homes and attention/coordination interpretation on top of the runtime-state foundation.
 
-Phase 3B v1.1 hardens daily operation: explicit launch identity enables a low-friction binding handshake, per-thread degradation preserves unrelated work, and local diagnostics distinguish integration health from agent activity. Fresh-session correlation remains unsupported without an explicit native identity; Phase 4 spatial work has not begun.
+Phase 3B v1.1 hardens daily operation: explicit launch identity enables a low-friction binding handshake, per-thread degradation preserves unrelated work, and local diagnostics distinguish integration health from agent activity. Fresh-session correlation remains unsupported without an explicit native identity; Phase 4A is implemented; Phase 4B has not begun.
+
+
+## Phase 4A: spatial team behavior
+
+Stable roles now give agents a recognizable home: Test Lab for Testers, Library for Researchers, Review Area for Reviewers, and desks for engineers/leads. Current work temporarily overrides home. Explicit user-input waiting brings agents to NEEDS YOU; deterministic child waiting uses coordination. Completion celebrates in place during existing grace. These are interpretations of normalized truth, without provider content or runtime inference. Phase 4B has not begun.

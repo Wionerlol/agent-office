@@ -1,5 +1,7 @@
 # Agent Office Acceptance Criteria
 
+Current state: Phases 1–3B v1.1 and fresh-session investigation COMPLETE; Phase 4A COMPLETE; Phase 4B NOT YET IMPLEMENTED. Earlier phase sections below retain their historical evidence.
+
 ## Fresh-session deterministic correlation investigation — COMPLETE
 
 - Investigation-only; no production binding/domain/frontend changes or Phase 3B v1.2. Existing explicit UUID paths, generation checks, replay, native activity and fallback behavior remain unchanged.
@@ -240,3 +242,23 @@ The real-process automated smoke uses office-run, a blocking search child, actua
 The manual checklist was also exercised with a real wrapped Codex session against a loopback server in a disposable repository. Codex ran a search and actual pytest successfully; both commands stayed observable longer than the configured idle timeout. Browser observation confirmed one agent, search/test state updates, the test-lab indicator, and removal after exit (including the frontend's existing five-second offline grace period). Browser automation used local Chromium and screenshots for inspection. No frontend redesign was needed.
 
 Early verification found and corrected an overly strict smoke-fixture lifecycle-order assumption and an agent-launcher prompt misclassification. An initial read-only Codex attempt could not run pytest's temporary-file setup; the verified disposable-repository run used workspace-write permissions and preserved command failures. Those failed attempts are not counted as passing evidence.
+
+
+## Phase 4A spatial team acceptance
+
+- [x] Pure frontend planning separates home/destination without backend truth changes.
+- [x] THINKING/IDLE use explicit role homes; absent/unknown roles safely use desks.
+- [x] TESTING/SEARCHING/TOOL_RUNNING/CODING override home.
+- [x] WAITING/user_input uses NEEDS YOU and `?`; generic waiting remains distinct.
+- [x] Child coordination requires a nonempty, non-self normalized child ID; parentage alone is insufficient.
+- [x] DONE immediately celebrates during existing terminal grace.
+- [x] Distinct stable seats preserve walkability, routing, collisions and y ordering, including uneven frame cadence.
+- [x] Normalized simulation uses the same scene path with pause/resume.
+- [x] Controlled Chromium screenshots demonstrate role homes, Review/Test Lab/Library, multiple user waits, coordination, child DONE and shared zones.
+- [x] No provider parsing, UUID/content display or native infrastructure work is introduced.
+
+Required verification remains full backend/frontend tests, both linters, production build and git diff check locally, plus GitHub Backend and Frontend. Never merge failing required checks. Visual evidence is controlled normalized data, not a native capability claim: [homes](images/spatial-role-homes.png), [attention/team](images/spatial-attention-team.png), [completion](images/spatial-child-done.png).
+
+UX limits: dense grids shrink characters/may hide labels; returning agents take free seats rather than indefinitely reserving empty places; coordination shares the lounge without an organization graph. Phase 4B remains unimplemented.
+
+Phase 4A local verification (2026-10-08): `uv run pytest -q` 210 passed, two existing deprecation warnings; `uv run ruff check backend main.py` passed; `npm test -- --reporter=dot` 75 passed across 14 files; `npm run lint`, `npm run build` and `git diff --check` passed. Chromium fixture smoke completed with zero page errors; all three screenshots were inspected. Hosted check results are tied to the final PR commit.

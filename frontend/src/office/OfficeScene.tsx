@@ -4,10 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import type { Agent, CodexUsage } from "../models/agent";
 import { useAgentStore } from "../store/agents";
 import { atmosphereForUsage } from "./atmosphere";
-import { assignDesk, OFFICE_HEIGHT, OFFICE_WIDTH, POSITIONS, separateAgentPositions, spreadAgentTargets, type Point } from "./layout";
+import { assignDesk, OFFICE_HEIGHT, OFFICE_WIDTH, POSITIONS, separateAgentPositions, StableZoneSlots, type Point } from "./layout";
 import { isOfficePositionWalkable, routeBetween } from "./navigation";
 import { drawOfficeScenery, type OfficeScenery } from "./scenery";
-import { visualFor, type VisualState } from "./visual";
+import { spatialBehaviorFor, type VisualState } from "./visual";
 
 interface OfficeSceneProps {
   agents: Agent[];
@@ -21,12 +21,18 @@ interface RenderedAgent {
   labels: Container;
   name: Text;
   status: Text;
+  indicator: Container;
+  indicatorText: Text;
+  indicatorPlate: Graphics;
   path: Point[];
   targetZone: string;
   targetPoint: Point;
   showLabel: boolean;
   animation: VisualState;
   phase: number;
+  distanceBefore: number;
+  stalledFrames: number;
+  holdPosition: boolean;
 }
 
 const agentColor = (id: string): number => {
@@ -85,7 +91,14 @@ function createRenderedAgent(agent: Agent, selectAgent: (id: string) => void): R
   const statusPlate = new Graphics().roundRect(-33, 48, 66, 14, 7).fill({ color: 0x304b4d, alpha: 0.94 });
   const labels = new Container();
   labels.addChild(namePlate, name, statusPlate, status);
-  container.addChild(shadow, body, labels);
+  const indicatorText = new Text({ text: "", style: { fontFamily: "system-ui", fontSize: 11, fill: 0x263234, fontWeight: "700" } });
+  indicatorText.anchor.set(0.5);
+  const indicator = new Container();
+  indicator.position.set(0, -62);
+  const indicatorPlate = new Graphics();
+  indicator.addChild(indicatorPlate, indicatorText);
+  indicator.visible = false;
+  container.addChild(shadow, body, labels, indicator);
   container.position.set(POSITIONS.entrance.x, POSITIONS.entrance.y);
   return {
     container,
@@ -93,12 +106,18 @@ function createRenderedAgent(agent: Agent, selectAgent: (id: string) => void): R
     labels,
     name,
     status,
+    indicator,
+    indicatorText,
+    indicatorPlate,
     path: [],
     targetZone: "entrance",
     targetPoint: POSITIONS.entrance,
     showLabel: true,
     animation: "entering",
     phase: Math.random() * Math.PI * 2,
+    distanceBefore: Infinity,
+    stalledFrames: 0,
+    holdPosition: false,
   };
 }
 
@@ -108,6 +127,7 @@ export function OfficeScene({ agents, deskCount, usage = null }: OfficeSceneProp
   const sceneryRef = useRef<OfficeScenery | null>(null);
   const renderedRef = useRef(new Map<string, RenderedAgent>());
   const assignmentsRef = useRef(new Map<string, string>());
+  const slotsRef = useRef(new StableZoneSlots());
   const [ready, setReady] = useState(false);
   const selectAgent = useAgentStore((state) => state.selectAgent);
   const atmosphere = atmosphereForUsage(usage?.remaining_percent ?? null);
@@ -120,6 +140,7 @@ export function OfficeScene({ agents, deskCount, usage = null }: OfficeSceneProp
     const app = new Application();
     const renderedAgents = renderedRef.current;
     const deskAssignments = assignmentsRef.current;
+    const slots = slotsRef.current;
     let cancelled = false;
     void app.init({ width: OFFICE_WIDTH, height: OFFICE_HEIGHT, antialias: true, backgroundColor: 0x202d31, resolution: Math.min(window.devicePixelRatio, 2), autoDensity: true }).then(() => {
       if (cancelled) return app.destroy();
@@ -130,46 +151,75 @@ export function OfficeScene({ agents, deskCount, usage = null }: OfficeSceneProp
       app.stage.sortableChildren = true;
       sceneryRef.current = drawOfficeScenery(app, atmosphereRef.current);
       appRef.current = app;
+      let movementFrames = 0;
       app.ticker.add((ticker) => {
-        for (const rendered of renderedAgents.values()) {
-          const waypoint = rendered.path[0];
-          if (waypoint) {
-            const dx = waypoint.x - rendered.container.x;
-            const dy = waypoint.y - rendered.container.y;
-            const distance = Math.hypot(dx, dy);
-            if (distance < 4) rendered.path.shift();
-            else {
-              const movement = Math.min(distance, ticker.deltaTime * 4.4);
-              rendered.container.x += (dx / distance) * movement;
-              rendered.container.y += (dy / distance) * movement;
+        // Fixed movement steps make collision resolution independent of render frame timing.
+        // Bound catch-up after a background-tab pause instead of teleporting through furniture.
+        movementFrames = Math.min(movementFrames + ticker.deltaTime, 6);
+        while (movementFrames >= 1) {
+          movementFrames -= 1;
+          for (const rendered of renderedAgents.values()) {
+            const waypoint = rendered.path[0];
+            if (waypoint) {
+              const dx = waypoint.x - rendered.container.x;
+              const dy = waypoint.y - rendered.container.y;
+              const distance = Math.hypot(dx, dy);
+              rendered.distanceBefore = distance;
+              if (distance < 4) rendered.path.shift();
+              else {
+                const movement = Math.min(distance, 4.4);
+                rendered.container.x += (dx / distance) * movement;
+                rendered.container.y += (dy / distance) * movement;
+              }
+            }
+            const time = app.ticker.lastTime / 180 + rendered.phase;
+            const active = rendered.animation === "typing" || rendered.animation === "testing" || rendered.animation === "working_machine";
+            rendered.body.y = active ? Math.sin(time * 2) * 1.5 : 0;
+            rendered.body.rotation = rendered.animation === "celebration" ? Math.sin(time * 2) * 0.12 : 0;
+            rendered.body.alpha = rendered.animation === "error" ? 0.65 + Math.sin(time * 3) * 0.3 : 1;
+            rendered.indicator.alpha = rendered.animation === "user_attention" ? 0.85 + Math.sin(time / 3) * 0.15 : 1;
+            rendered.labels.visible = rendered.showLabel && (rendered.path.length === 0 || rendered.animation === "celebration");
+            rendered.container.zIndex = 100 + Math.round(rendered.container.y);
+          }
+          const separated = separateAgentPositions(
+            [...renderedAgents].map(([id, rendered]) => ({
+              id,
+              x: rendered.container.x,
+              y: rendered.container.y,
+              // Doorways admit a moving figure, while settled figures keep their full seat space.
+              radius: (rendered.path.length ? 16 : 25) * rendered.container.scale.x,
+            })),
+          );
+          for (const [id, point] of separated) {
+            const rendered = renderedAgents.get(id);
+            if (!rendered) continue;
+            const current = { x: rendered.container.x, y: rendered.container.y };
+            const constrained = [
+              point,
+              { x: point.x, y: current.y },
+              { x: current.x, y: point.y },
+            ].find(isOfficePositionWalkable) ?? current;
+            rendered.container.position.set(constrained.x, constrained.y);
+            const waypoint = rendered.path[0];
+            if (waypoint) {
+              const remaining = Math.hypot(waypoint.x - constrained.x, waypoint.y - constrained.y);
+              rendered.stalledFrames = rendered.distanceBefore - remaining > 0.25
+                ? 0 : rendered.stalledFrames + 1;
+              if (rendered.stalledFrames >= 60) {
+                // Collision avoidance can displace a walker to the other side of furniture.
+                // Refresh only stalled routes, preserving stable destinations and the same grid.
+                const refreshed = routeBetween(constrained, rendered.targetPoint);
+                if (refreshed.length) rendered.path = refreshed;
+                rendered.stalledFrames = 0;
+              }
+            } else {
+              rendered.stalledFrames = 0;
+              // A passing walker must not permanently displace a settled character from its seat.
+              if (!rendered.holdPosition && Math.hypot(constrained.x - rendered.targetPoint.x, constrained.y - rendered.targetPoint.y) > 12) {
+                rendered.path = routeBetween(constrained, rendered.targetPoint);
+              }
             }
           }
-          const time = app.ticker.lastTime / 180 + rendered.phase;
-          const active = rendered.animation === "typing" || rendered.animation === "testing" || rendered.animation === "working_machine";
-          rendered.body.y = active ? Math.sin(time * 2) * 1.5 : 0;
-          rendered.body.rotation = rendered.animation === "celebration" ? Math.sin(time * 2) * 0.12 : 0;
-          rendered.body.alpha = rendered.animation === "error" ? 0.65 + Math.sin(time * 3) * 0.3 : 1;
-          rendered.labels.visible = rendered.showLabel && rendered.path.length === 0;
-          rendered.container.zIndex = 100 + Math.round(rendered.container.y);
-        }
-        const separated = separateAgentPositions(
-          [...renderedAgents].map(([id, rendered]) => ({
-            id,
-            x: rendered.container.x,
-            y: rendered.container.y,
-            radius: 25 * rendered.container.scale.x,
-          })),
-        );
-        for (const [id, point] of separated) {
-          const rendered = renderedAgents.get(id);
-          if (!rendered) continue;
-          const current = { x: rendered.container.x, y: rendered.container.y };
-          const constrained = [
-            point,
-            { x: point.x, y: current.y },
-            { x: current.x, y: point.y },
-          ].find(isOfficePositionWalkable) ?? current;
-          rendered.container.position.set(constrained.x, constrained.y);
         }
       });
       setReady(true);
@@ -178,6 +228,7 @@ export function OfficeScene({ agents, deskCount, usage = null }: OfficeSceneProp
       cancelled = true;
       renderedAgents.clear();
       deskAssignments.clear();
+      slots.clear();
       appRef.current = null;
       sceneryRef.current = null;
       if (app.renderer) app.destroy(true, { children: true });
@@ -203,14 +254,18 @@ export function OfficeScene({ agents, deskCount, usage = null }: OfficeSceneProp
     const availableDesks = Math.max(1, Math.min(deskCount, 8));
     const projections = agents.map((agent) => ({
       agent,
-      visual: visualFor(agent.status, assignDesk(agent.id, assignmentsRef.current, availableDesks)),
+      visual: spatialBehaviorFor(agent, assignDesk(agent.id, assignmentsRef.current, availableDesks)),
     }));
-    const targetPositions = spreadAgentTargets(
-      projections.map(({ agent, visual }) => ({ id: agent.id, zone: visual.zone })),
+    const targetPositions = slotsRef.current.place(
+      projections.map(({ agent, visual }) => ({
+        id: agent.id,
+        zone: visual.holdPosition ? renderedRef.current.get(agent.id)?.targetZone ?? visual.destinationZone : visual.destinationZone,
+      })),
     );
 
     for (const { agent, visual } of projections) {
       let rendered = renderedRef.current.get(agent.id);
+      const newlyCreated = !rendered;
       if (!rendered) {
         rendered = createRenderedAgent(agent, selectAgent);
         renderedRef.current.set(agent.id, rendered);
@@ -219,6 +274,17 @@ export function OfficeScene({ agents, deskCount, usage = null }: OfficeSceneProp
       rendered.name.text = shortName(agent.name);
       rendered.status.text = agent.status.toUpperCase();
       rendered.animation = visual.animation;
+      rendered.holdPosition = visual.holdPosition;
+      const compactAttention = visual.attention === "user";
+      const indicatorText = compactAttention ? "?" : visual.indicator ?? "";
+      if (rendered.indicatorText.text !== indicatorText) {
+        const halfWidth = compactAttention ? 12 : 47;
+        rendered.indicatorText.text = indicatorText;
+        rendered.indicatorPlate.clear().roundRect(-halfWidth, -10, halfWidth * 2, 20, 7)
+          .fill(0xffe6ae).stroke({ width: 1, color: 0x826539 });
+      }
+      rendered.indicator.position.set(compactAttention ? 30 : 0, compactAttention ? -30 : -62);
+      rendered.indicator.visible = visual.indicator !== null;
       const placement = targetPositions.get(agent.id) ?? {
         ...POSITIONS.entrance,
         scale: 1,
@@ -227,16 +293,27 @@ export function OfficeScene({ agents, deskCount, usage = null }: OfficeSceneProp
       rendered.container.scale.set(placement.scale);
       rendered.showLabel = placement.showLabel;
       const target = { x: placement.x, y: placement.y };
-      if (visual.zone === "entrance" && rendered.targetZone === "entrance") {
+      if (visual.holdPosition) {
+        if (newlyCreated) {
+          rendered.container.position.set(target.x, target.y);
+          rendered.targetZone = visual.destinationZone;
+          rendered.targetPoint = target;
+        }
+        rendered.path = [];
+        rendered.stalledFrames = 0;
+        continue;
+      }
+      if (visual.destinationZone === "entrance" && rendered.targetZone === "entrance") {
         rendered.container.position.set(target.x, target.y);
       }
       if (
-        visual.zone !== rendered.targetZone
+        visual.destinationZone !== rendered.targetZone
         || target.x !== rendered.targetPoint.x
         || target.y !== rendered.targetPoint.y
       ) {
-        rendered.targetZone = visual.zone;
+        rendered.targetZone = visual.destinationZone;
         rendered.targetPoint = target;
+        rendered.stalledFrames = 0;
         rendered.path = routeBetween(
           { x: rendered.container.x, y: rendered.container.y },
           target,
@@ -245,5 +322,8 @@ export function OfficeScene({ agents, deskCount, usage = null }: OfficeSceneProp
     }
   }, [agents, deskCount, ready, selectAgent]);
 
-  return <div className="office-scene" ref={hostRef} aria-label="Live agent office map" />;
+  return <div className="office-scene" ref={hostRef} role="img" aria-label={`Live agent office map. ${agents.map((agent) => {
+    const plan = spatialBehaviorFor(agent, "assigned desk");
+    return `${agent.name}: ${agent.status}, ${plan.indicator ?? plan.destinationZone.replaceAll("_", " ")}`;
+  }).join(". ")}`} />;
 }

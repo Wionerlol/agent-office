@@ -8,7 +8,8 @@
 4. Phase 3B Native Runtime Adapter v1 — COMPLETE. Explicit bindings, read-only versioned consumer, waiting context, semantic child normalization, bounded replay/reconciliation and concurrent activity aggregation are implemented. Full regression and real daemon/TUI smoke passed; preserve these gates for revisions.
 5. Phase 3B v1.1 — COMPLETE: explicit-resume/operator CLI binding, generation-aware retries, per-thread recovery, reviewed profiles and local health diagnostics.
 6. Fresh-session deterministic correlation investigation — COMPLETE, investigation-only: current-runtime limitation; no Phase 3B v1.2 feature. See [evidence and decision matrix](runtime-probe/FRESH_SESSION_CORRELATION.md), Decision 28 and the explicit operator workflow in NATIVE_RUNTIME.md.
-7. Phase 4 — NOT YET IMPLEMENTED; recommended next separate task. Do not hold spatial work behind heuristic fresh binding or indefinite runtime recovery. Further native work requires new upstream evidence or a separately scoped correctness issue.
+7. Phase 4A Role-Aware Spatial Team Behavior — COMPLETE: planner, role homes, attention/coordination, stable seats, DONE celebration, simulation and visual verification.
+8. Phase 4B — NOT YET IMPLEMENTED. Refine readability/interaction separately. Native work requires new upstream evidence or a separately scoped correctness issue.
 
 ## Completed Phase 2: Semantic Agent Model
 
@@ -59,3 +60,15 @@ When finished, report:
 - tests added/updated;
 - exact verification commands and results;
 - any remaining open questions or follow-up work.
+
+
+## Completed Phase 4A plan
+
+1. Preserve backend/native contracts and inspect existing scene/pathing.
+2. Add pure home/destination planning and exact aliases.
+3. Add Review/User Attention anchors; reuse lounge coordination.
+4. Allocate stable seats and apply meaningful plan changes incrementally.
+5. Preserve routes/separation/terminal grace; recover stalled or displaced actors.
+6. Update normalized simulation and pause/resume controls.
+7. Verify deterministic frontend behavior and inspect real browser fixture screenshots.
+8. Run full regressions and required Backend/Frontend CI; prepare a separate PR.

@@ -23,7 +23,7 @@ Frontend:
 - routing and collision handling
 - desk assignment
 - office scenery
-- state-driven spatial behavior
+- centralized role home / state destination / attention planning
 - Codex usage atmosphere
 
 ## Current runtime path
@@ -113,3 +113,12 @@ Integration health is separate from AgentState. Thread failures release only tha
 The focused [investigation](runtime-probe/FRESH_SESSION_CORRELATION.md) found no deterministic fresh launcher → native thread contract. Installed CLI 0.160.0 fresh launches were blocked by shared feature incompatibility; matching already-installed CLI/daemon 0.161.0 exercised one fresh direct session, two concurrent direct sessions and two concurrent actual DevRouter sessions in the same repository. Five thread/started events and reconnect metadata contained no controlled nonce. Source/originator were identical generic labels. This is a runtime limitation, not a reason to add heuristics or claim v1.2.
 
 Installed DevRouter derives its Office ID from the repository: different homes create separate tmux/native sessions but reuse the Office ID. That external limitation was documented, not changed. Explicit UUID binding remains the operator workflow; fresh sessions without exact ownership remain on fallbacks. Stop infrastructure investigation and begin Phase 4 separately. Long-running recovery and hypothetical hooks/proxies/creation APIs are not prerequisites for this negative conclusion.
+
+
+## Phase 4A — spatial team behavior
+
+Phase 4A is implemented with no backend/native changes. Roles provide homes; work, user attention and deterministic child waiting provide destinations. Review and NEEDS YOU are modest anchors; coordination shares the lounge. DONE consumes existing terminal grace in place.
+
+Pure planner/seat and incremental Pixi tests cover aliases, overrides, invalid waits, stable reservations, walkable crowd targets, uneven frame cadence and terminal presentation. Real local Chromium visual smoke uses controlled normalized WebSocket snapshots through the actual frontend, not new provider capability evidence. Screenshots under docs/images show homes, attention, coordination, crowding and completion. Doorway congestion and permanently displaced seated actors were corrected within existing routing/separation.
+
+Decision 28 remains unchanged. Independent DevRouter sessions may still reuse a repository-derived Office ID; that external issue remains open. Dense zones trade scale/labels for space. Phase 4B should refine readability/interaction based on daily team use; it is not implemented here.

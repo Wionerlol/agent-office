@@ -419,3 +419,73 @@ The installed 0.160.0 fresh TUI was blocked by shared feature incompatibility; m
 - Treat generic source/session IDs or schema-only metadata possibilities as confirmed causal ownership.
 - Become a Codex turn controller, inject a first turn, install hooks/configuration or restart the shared daemon to solve observation identity.
 - Keep expanding runtime recovery infrastructure after this focused negative result.
+
+
+---
+
+## Decision 29: Home Zone and Current Destination are separate visual concepts
+
+**Decision**
+A pure frontend planner exposes role home separately from activity destination. OfficeScene consumes it incrementally; backend state and native adapters do not acquire layout concepts.
+
+**Reason**
+Testers and engineers thinking need distinct spatial identity, while Backend agents testing must visit Test Lab. Existing normalized facts are sufficient.
+
+**Rejected Alternatives**
+- Put rooms in backend state; scatter role/state checks through rendering; infer runtime state from animation.
+
+
+---
+
+## Decision 30: Spatial precedence protects lifecycle and attention
+
+**Decision**
+Use lifecycle, explicit user attention, deterministic child coordination, active work, role home, then generic fallback. DONE celebrates immediately in place during existing grace; ERROR retains visible existing behavior.
+
+**Reason**
+Attention must remain recognizable regardless of role. Work overrides home without erasing it, and short-lived children must signal completion before cleanup.
+
+**Rejected Alternatives**
+- Let role override testing/searching; infer waiting from active children; extend backend grace solely for animation.
+
+
+---
+
+## Decision 31: Role homes use exact aliases and safe fallback
+
+**Decision**
+Keep trimmed lowercase exact aliases in one mapping: tester/testing/qa → Test Lab; research/researcher → Library; reviewer/code_review/review → Review; engineering/lead aliases and unknown roles → assigned desks.
+
+**Reason**
+Identity already supplies organizational semantics. An explicit mapping is predictable and can later become configurable without NLP.
+
+**Rejected Alternatives**
+- Substring, task, tool or prompt role inference; role editor/configurable room system in Phase 4A.
+
+
+---
+
+## Decision 32: Attention and coordination are compact spatial cues
+
+**Decision**
+WAITING/user_input visits NEEDS YOU with a restrained question marker. WAITING/child_agent uses shared lounge coordination only with a nonempty, non-self child ID. Add a modest Review Area, retaining names/status and content-free accessible summaries.
+
+**Reason**
+Space should reveal user attention and deterministic child waiting without opening details. Compact markers remain readable with several waiting agents, without native question content.
+
+**Rejected Alternatives**
+- Chat/reasoning bubbles; organization graphs/permanent lines; treat generic waiting as input; full office redesign.
+
+
+---
+
+## Decision 33: Stable reservations reuse existing movement machinery
+
+**Decision**
+Reserve seats per visible ID/zone, prune released ownership, share lounge/coordination seats and grow dense grids only at capacity thresholds. Keep routing/separation/z ordering; use fixed movement steps and reroute stalled or displaced actors. Simulation uses the same projection.
+
+**Reason**
+Shared functional zones need distinct targets without unrelated reshuffling. Controlled smoke exposed doorway congestion and displaced seats; targeted recovery preserves existing pathing and tolerates uneven frames.
+
+**Rejected Alternatives**
+- Rebuild Pixi or randomize seats on updates; retain departed IDs forever; add a physics/layout engine; guarantee unlimited readable density.

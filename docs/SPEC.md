@@ -8,6 +8,10 @@
 | 2 Semantic Agent Model | COMPLETE |
 | 3A Native Runtime Capability Probe | COMPLETE |
 | 3B Native Adapter v1 | COMPLETE |
+| 3B v1.1 Native Hardening | COMPLETE |
+| Fresh-session correlation | COMPLETE: current-runtime limitation |
+| 4A Role-Aware Spatial Team Behavior | COMPLETE |
+| 4B | NOT YET IMPLEMENTED |
 
 ## Native Runtime v1 contract
 
@@ -290,3 +294,35 @@ Preserve Decisions 1–23 and the native normalization architecture. Decisions 2
 `agent-office native status|bind|reconnect|validate` provides local operator workflows. Bind adds optional expected_generation to the existing API; new clients always supply it. GET /api/native/codex adds protocol/health and per-binding fallback/failure category/scope/type. Thread IDs stay in developer diagnostics, not frontend models. Keep loopback as the expected server default.
 
 Reviewed profiles centralize version/RPC/fact/item/discriminator assumptions; exact 0.161.0 joins previously reviewed versions after local schema and runtime review. Unknown versions fail closed; validation never starts turns or answers native requests. Selected-thread read/parsing/hydration/backlog errors degrade and release only that thread; typed connection loss/timeout/unsupported handshake affects its root connection. Existing one-root-plus-children multiplexing is retained, with bounded retries and no socket per child. See NATIVE_RUNTIME.md for limits, health contract and real evidence.
+
+
+## Phase 4A spatial interpretation contract
+
+Runtime truth stays in the backend. The pure `spatialBehaviorFor` planner in `frontend/src/office/visual.ts` consumes role, status and normalized waiting context, returning home, destination, animation, attention and terminal hold policy. OfficeScene applies it incrementally without rebuilding Pixi or parsing native events. Backend models, identity, provenance and native integration are unchanged.
+
+Spatial precedence:
+
+1. Lifecycle: STARTING entrance; OFFLINE exit; DONE immediate celebration at existing position (home for a new terminal snapshot); ERROR existing visible desk error behavior.
+2. WAITING/user_input: User Attention with compact `?` and NEEDS YOU title; no question content.
+3. WAITING/child_agent with a nonempty, non-self waiting_on_agent_id: shared lounge coordination and Child wait marker. Parentage alone never implies waiting.
+4. Active work: TESTING Test Lab; SEARCHING Library; TOOL_RUNNING Tool Lab; CODING assigned engineering desk.
+5. THINKING/IDLE: role home, retaining contemplation/relaxed animation.
+6. Generic WAITING: lounge; absent/unknown roles: assigned desk home.
+
+Exact aliases after trim/lowercase only:
+
+| Roles | Home |
+| --- | --- |
+| tester, testing, qa | Test Lab |
+| research, researcher | Library |
+| reviewer, code_review, review | Review Area |
+| backend, backend_engineer, frontend, frontend_engineer, lead, leader, coordinator | Assigned desk |
+| absent or any other string | Assigned desk |
+
+Review and User Attention use existing unused left-side space without new walls. Coordination shares the lounge. No permanent parent-child lines or organization layout is added.
+
+`StableZoneSlots` reserves seats per visible ID and canonical zone, sharing lounge/coordination allocation. Existing reservations survive unrelated updates/departures. Returning agents claim a free seat without reshuffling peers. Comfortable capacities: Test Lab 4, Library 3, Review 2, User Attention 3, Lounge 2, Tool Lab 3. Beyond capacity, the existing scaled grid grows at thresholds and retains its high-water capacity until the zone empties. Dense grids may shrink sprites/hide labels. Memory is bounded by visible agents and occupied zones; departure/teardown releases reservations.
+
+Movement retains walkable grid/A*, separation and y ordering. Fixed movement steps tolerate variable frame cadence; only stalled routes and displaced seated actors are rerouted. Destination changes occur only when plan/seat changes. DONE immediately stops walking, using unchanged backend terminal timing.
+
+Simulation uses normalized roles, parent IDs and waiting context through the same scene path. Pause/Resume freezes demo transitions for inspection. Semantic names remain authoritative; no native UUID, prompt, reasoning or tool output is exposed.
